@@ -1,0 +1,1119 @@
+/* =============================================================================
+   OceanSwarm GCS — base components
+   Owner: design · contract: docs/GCS-design-system.md §5 (panel) + §6 (components)
+   -----------------------------------------------------------------------------
+   PUBLISHED CLASSES (module owners may rely on these; do not redefine them):
+
+     Panel      .gcs-panel  .gcs-panel--warn  .gcs-panel--danger  .is-critical
+                .gcs-panel-head  .gcs-panel-index  .gcs-panel-title
+                .gcs-panel-meta  .gcs-panel-tools
+                .gcs-panel-body  .gcs-panel-body--flush  .gcs-panel-body--scroll
+     Inset      .gcs-inset
+     Buttons    .gcs-btn  --primary  --danger  --ghost  --icon  --sm  --block
+                .is-active  .is-pending  .is-acked  [disabled] / .is-disabled
+     Segment    .gcs-seg  .gcs-seg-item (+ .is-active)  .gcs-seg--sm
+     Dot        .gcs-dot  --ok --warn --danger --offline --accent
+                .is-live (halo)   .is-pulse (warn pulse)
+     Bar        .gcs-bar  .gcs-bar-fill (set style="width:N%")
+                .gcs-bar--warn  .gcs-bar--danger  .gcs-bar--accent2
+     Key/value  .gcs-kv  .gcs-kv-k  .gcs-kv-v (<i> = unit)  .gcs-kv-group
+     Chip       .gcs-chip  --accent --ok --warn --danger --cmd
+     Rows/list  .gcs-list  .gcs-list-label  .gcs-row (+ .is-selected)
+                .gcs-row--warn  .gcs-row--danger  .gcs-row--new / .is-new
+     Type       .gcs-mono  .gcs-en  .gcs-label  .gcs-figure / --md  .gcs-unit
+                .gcs-txt--2 --3 --4 --accent --ok --warn --danger --cmd
+     Misc       .gcs-icon  .gcs-hair  .gcs-enter  .gcs-flash
+
+   Element-level resets are scoped to #gcs-root and written at zero specificity
+   (:where) so module styles can always override them.
+   ============================================================================= */
+
+/* =============================================================================
+   0. Root typography & scoped reset
+   ============================================================================= */
+#gcs-root {
+  font-family: var(--gcs-font-cn);
+  font-size: var(--gcs-fs-body);
+  line-height: 1.5;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:where(#gcs-root),
+:where(#gcs-root) *,
+:where(#gcs-root) *::before,
+:where(#gcs-root) *::after {
+  box-sizing: border-box;
+}
+
+:where(#gcs-root) :where(button, input, select, textarea) {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+:where(#gcs-root) :where(button) {
+  appearance: none;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+:where(#gcs-root) ::selection {
+  background: rgba(95, 243, 228, 0.22);
+  color: var(--gcs-text);
+}
+
+/* =============================================================================
+   1. PANEL — smoked-glass tactical plate  (§5)
+   ============================================================================= */
+
+/* Top-level panel. Flex column so head stays fixed and body flexes.
+   NOTE: panels clip their content (overflow:hidden) — never render popovers
+   or tooltips inside a .gcs-panel; use the overlay host instead. */
+.gcs-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  color: var(--gcs-text);
+  background-color: var(--gcs-panel);
+  background-image: var(--gcs-sheen);
+  border: var(--gcs-hair) solid var(--gcs-line);
+  border-radius: var(--gcs-radius);
+  box-shadow:
+    0 0 0 1px var(--gcs-edge-dark),
+    var(--gcs-shadow-panel),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  overflow: hidden;
+  animation: gcs-panel-in var(--gcs-slow) var(--gcs-ease) both;
+  animation-delay: calc(var(--gcs-i, 0) * 40ms);
+}
+
+/* Four drafting corner brackets, drawn as eight hairline gradients. */
+.gcs-panel::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.8;
+  background:
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 10px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 1px 10px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right top / 10px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right top / 1px 10px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left bottom / 10px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left bottom / 1px 10px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 10px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 1px 10px no-repeat;
+}
+
+/* Reserved overlay strip: used only by the alarm variants below. */
+.gcs-panel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* --- panel head ----------------------------------------------------------- */
+.gcs-panel-head {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--gcs-gap-s);
+  height: var(--gcs-panel-head-h);
+  /* right padding is 14 so the head tools never sit under the corner bracket */
+  padding: 0 14px 0 var(--gcs-gap);
+  border-bottom: var(--gcs-hair) solid var(--gcs-line-faint);
+  background: linear-gradient(180deg, rgba(160, 240, 250, 0.045), rgba(160, 240, 250, 0.004));
+}
+
+/* short lit segment of the head rule — the "deck lamp" detail */
+.gcs-panel-head::after {
+  content: "";
+  position: absolute;
+  left: var(--gcs-gap);
+  bottom: -1px;
+  width: 26px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gcs-accent), rgba(95, 243, 228, 0));
+  opacity: 0.7;
+}
+
+.gcs-panel-index {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 15px;
+  padding: 0 4px;
+  border: var(--gcs-hair) solid var(--gcs-line-faint);
+  border-radius: var(--gcs-radius-s);
+  background: rgba(2, 11, 18, 0.18);
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.gcs-panel-title {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 0;
+  min-width: 0;
+  font-family: var(--gcs-font-cn);
+  font-size: var(--gcs-fs-title);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+  white-space: nowrap;
+}
+
+.gcs-panel-title em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: var(--gcs-fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--gcs-track-micro);
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+}
+
+.gcs-panel-meta {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Right-hand action cluster. When it follows .gcs-panel-meta it keeps a small
+   gap; on its own it floats right. */
+.gcs-panel-tools {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--gcs-gap-xs);
+}
+
+.gcs-panel-meta + .gcs-panel-tools {
+  margin-left: var(--gcs-gap-xs);
+}
+
+/* --- panel body ----------------------------------------------------------- */
+.gcs-panel-body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gcs-gap-s);
+  min-height: 0;
+  padding: var(--gcs-gap);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.gcs-panel-body--flush {
+  padding: 0;
+  gap: 0;
+}
+
+.gcs-panel-body--scroll {
+  overflow-y: auto;
+}
+
+/* --- inset block (max one level of nesting) ------------------------------- */
+.gcs-inset {
+  position: relative;
+  padding: var(--gcs-pad-sm) 10px;
+  border: var(--gcs-hair) solid var(--gcs-line-faint);
+  border-radius: var(--gcs-radius-s);
+  background: var(--gcs-panel-soft);
+  box-shadow: inset 0 1px 0 rgba(180, 244, 252, 0.04);
+}
+
+/* --- alarm stripes (§6.9) ------------------------------------------------- */
+.gcs-panel--warn {
+  border-top-color: rgba(255, 178, 87, 0.55);
+  background-image:
+    linear-gradient(180deg, rgba(255, 178, 87, 0.04), rgba(255, 178, 87, 0) 46%),
+    var(--gcs-sheen);
+}
+
+.gcs-panel--danger {
+  border-top-color: rgba(255, 93, 74, 0.6);
+  background-image:
+    linear-gradient(180deg, rgba(255, 93, 74, 0.05), rgba(255, 93, 74, 0) 46%),
+    var(--gcs-sheen);
+}
+
+.gcs-panel--warn::after {
+  opacity: 0.55;
+  background: var(--gcs-warn);
+}
+
+.gcs-panel--danger::after {
+  opacity: 0.7;
+  background: var(--gcs-danger);
+}
+
+.gcs-panel--danger.is-critical::after {
+  animation: gcs-alarm-breath var(--gcs-alarm-dur) ease-in-out infinite alternate;
+}
+
+/* the head "deck lamp" picks up the alarm severity */
+.gcs-panel--warn .gcs-panel-head::after {
+  background: linear-gradient(90deg, var(--gcs-warn), rgba(255, 178, 87, 0));
+  opacity: 0.6;
+}
+
+.gcs-panel--danger .gcs-panel-head::after {
+  background: linear-gradient(90deg, var(--gcs-danger), rgba(255, 93, 74, 0));
+  opacity: 0.7;
+}
+
+/* Low-end fallback: no backdrop support -> opaque plates instead of muddy glass */
+@supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))) {
+  .gcs-panel {
+    background-color: var(--gcs-panel-strong);
+  }
+}
+
+/* =============================================================================
+   2. BUTTONS (§6.1)
+   ============================================================================= */
+.gcs-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gcs-gap-xs);
+  height: var(--gcs-btn-h);
+  padding: 0 10px;
+  border: var(--gcs-hair) solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: transparent;
+  background-image: linear-gradient(180deg, rgba(180, 244, 252, 0.035), rgba(180, 244, 252, 0));
+  color: var(--gcs-text-2);
+  font-family: var(--gcs-font-cn);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease),
+    box-shadow var(--gcs-fast) var(--gcs-ease);
+}
+
+.gcs-btn:hover {
+  border-color: var(--gcs-line-strong);
+  background-color: var(--gcs-accent-soft);
+  color: var(--gcs-accent);
+}
+
+.gcs-btn:active {
+  background-color: rgba(95, 243, 228, 0.2);
+  transform: translateY(0.5px);
+}
+
+.gcs-btn:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+.gcs-btn .gcs-icon {
+  opacity: 0.85;
+}
+
+.gcs-btn:hover .gcs-icon,
+.gcs-btn.is-active .gcs-icon {
+  opacity: 1;
+}
+
+/* --- variants --- */
+.gcs-btn--primary {
+  border-color: var(--gcs-accent-line);
+  background-color: rgba(95, 243, 228, 0.06);
+  color: var(--gcs-accent);
+}
+
+.gcs-btn--primary:hover {
+  background-color: rgba(95, 243, 228, 0.16);
+  border-color: var(--gcs-accent);
+}
+
+.gcs-btn--danger {
+  border-color: rgba(255, 93, 74, 0.5);
+  color: var(--gcs-danger);
+}
+
+.gcs-btn--danger:hover {
+  border-color: var(--gcs-danger);
+  background-color: rgba(255, 93, 74, 0.12);
+  color: var(--gcs-danger);
+}
+
+.gcs-btn--danger:focus-visible {
+  outline-color: rgba(255, 93, 74, 0.55);
+}
+
+.gcs-btn--ghost {
+  border-color: transparent;
+  color: var(--gcs-text-2);
+}
+
+.gcs-btn--ghost:hover {
+  border-color: transparent;
+  background-color: var(--gcs-panel-hover);
+  color: var(--gcs-accent);
+}
+
+/* --- sizes / shapes --- */
+.gcs-btn--icon {
+  width: var(--gcs-btn-h);
+  padding: 0;
+}
+
+.gcs-btn--sm {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10.5px;
+  gap: 4px;
+}
+
+.gcs-btn--block {
+  width: 100%;
+}
+
+/* --- states --- */
+.gcs-btn.is-active {
+  border-color: var(--gcs-accent-line);
+  background-color: var(--gcs-accent-soft);
+  color: var(--gcs-accent);
+  box-shadow: inset 2px 0 0 var(--gcs-accent);
+}
+
+.gcs-btn.is-active::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gcs-accent), rgba(95, 243, 228, 0.1));
+  opacity: 0.85;
+}
+
+/* pending: dim text + three chasing dots (append ::after dots) */
+.gcs-btn.is-pending {
+  color: var(--gcs-text-3);
+  border-color: var(--gcs-line-strong);
+  cursor: progress;
+  pointer-events: none;
+}
+
+.gcs-btn.is-pending::after {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 2px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background-color: var(--gcs-text-3);
+  box-shadow: 5px 0 0 rgba(188, 220, 229, 0.28), 10px 0 0 rgba(188, 220, 229, 0.28);
+  animation: gcs-pending 900ms linear infinite;
+}
+
+/* acked: one-shot cyan flash (module removes .is-acked after the animation) */
+.gcs-btn.is-acked {
+  animation: gcs-acked 400ms var(--gcs-ease) 1;
+}
+
+.gcs-btn[disabled],
+.gcs-btn.is-disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   3. SEGMENTED CONTROL (§6.2)
+   ============================================================================= */
+.gcs-seg {
+  display: inline-flex;
+  align-items: stretch;
+  border: var(--gcs-hair) solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(3, 13, 20, 0.35);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.gcs-seg-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border: 0;
+  background: transparent;
+  color: var(--gcs-text-3);
+  font-family: var(--gcs-font-cn);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.gcs-seg-item + .gcs-seg-item {
+  border-left: var(--gcs-hair) solid var(--gcs-line-faint);
+}
+
+.gcs-seg-item:hover {
+  color: var(--gcs-text-2);
+  background-color: rgba(140, 224, 238, 0.06);
+}
+
+.gcs-seg-item:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: -1px;
+}
+
+.gcs-seg-item.is-active {
+  color: var(--gcs-accent);
+  background-color: rgba(95, 243, 228, 0.12);
+}
+
+.gcs-seg-item.is-active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gcs-accent);
+  opacity: 0.9;
+}
+
+.gcs-seg--sm .gcs-seg-item {
+  height: 20px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+/* =============================================================================
+   4. STATUS DOT (§6.3)
+   ============================================================================= */
+.gcs-dot {
+  --gcs-dot-color: var(--gcs-text-3);
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--gcs-dot);
+  height: var(--gcs-dot);
+  border-radius: 50%;
+  background-color: var(--gcs-dot-color);
+  box-shadow: 0 0 0 1px rgba(2, 11, 18, 0.55);
+  vertical-align: middle;
+}
+
+.gcs-dot--ok {
+  --gcs-dot-color: var(--gcs-ok);
+}
+
+.gcs-dot--warn {
+  --gcs-dot-color: var(--gcs-warn);
+}
+
+.gcs-dot--danger {
+  --gcs-dot-color: var(--gcs-danger);
+  animation: gcs-dot-breathe var(--gcs-alarm-dur) ease-in-out infinite;
+}
+
+.gcs-dot--offline {
+  --gcs-dot-color: var(--gcs-offline);
+}
+
+.gcs-dot--accent {
+  --gcs-dot-color: var(--gcs-accent);
+}
+
+/* activity halo, tinted to the dot's own status colour */
+.gcs-dot.is-live {
+  box-shadow:
+    0 0 0 1px rgba(2, 11, 18, 0.5),
+    0 0 0 3px rgba(92, 232, 165, 0.16),
+    0 0 10px rgba(92, 232, 165, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(2, 11, 18, 0.5),
+    0 0 0 3px color-mix(in srgb, var(--gcs-dot-color) 16%, transparent),
+    0 0 10px color-mix(in srgb, var(--gcs-dot-color) 30%, transparent);
+}
+
+.gcs-dot--warn.is-pulse {
+  animation: gcs-dot-breathe var(--gcs-alarm-dur) ease-in-out infinite;
+}
+
+/* =============================================================================
+   5. DATA BAR (§6.4)
+   ============================================================================= */
+.gcs-bar {
+  --gcs-bar-color: var(--gcs-accent);
+  position: relative;
+  display: block;
+  width: 64px;
+  height: var(--gcs-bar-h);
+  border-radius: 1px;
+  background-color: rgba(140, 224, 238, 0.12);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.gcs-bar-fill {
+  display: block;
+  height: 100%;
+  width: var(--gcs-bar-value, 0%);
+  border-radius: inherit;
+  background-color: var(--gcs-bar-color);
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--gcs-bar-color) 45%, transparent), var(--gcs-bar-color));
+  transition: width var(--gcs-normal) var(--gcs-ease), background-color var(--gcs-normal) var(--gcs-ease);
+}
+
+.gcs-bar--warn {
+  --gcs-bar-color: var(--gcs-warn);
+}
+
+.gcs-bar--danger {
+  --gcs-bar-color: var(--gcs-danger);
+}
+
+.gcs-bar--accent2 {
+  --gcs-bar-color: var(--gcs-accent-2);
+}
+
+/* =============================================================================
+   6. KEY / VALUE (§6.5)
+   ============================================================================= */
+.gcs-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+  padding: 1px 0;
+}
+
+.gcs-kv-k {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-cn);
+  font-size: var(--gcs-fs-micro);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.gcs-kv-v {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-family: var(--gcs-font-mono);
+  font-size: 12px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gcs-kv-v i,
+.gcs-kv-v em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: var(--gcs-fs-micro);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-3);
+}
+
+.gcs-kv-group {
+  display: grid;
+  grid-template-columns: repeat(var(--gcs-kv-cols, 2), minmax(0, 1fr));
+  gap: 2px 18px;
+}
+
+/* =============================================================================
+   7. CHIP (§6.6)
+   ============================================================================= */
+.gcs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--gcs-chip-h);
+  padding: 0 6px;
+  border: var(--gcs-hair) solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  color: var(--gcs-text-2);
+  font-family: var(--gcs-font-en);
+  font-size: var(--gcs-fs-micro);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--gcs-track-en);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.gcs-chip .gcs-icon {
+  opacity: 0.85;
+}
+
+.gcs-chip .gcs-dot {
+  width: 4px;
+  height: 4px;
+}
+
+.gcs-chip--accent {
+  border-color: var(--gcs-accent-line);
+  color: var(--gcs-accent);
+}
+
+.gcs-chip--ok {
+  border-color: rgba(92, 232, 165, 0.42);
+  color: var(--gcs-ok);
+}
+
+.gcs-chip--warn {
+  border-color: rgba(255, 178, 87, 0.42);
+  color: var(--gcs-warn);
+}
+
+.gcs-chip--danger {
+  border-color: rgba(255, 93, 74, 0.5);
+  color: var(--gcs-danger);
+}
+
+.gcs-chip--cmd {
+  border-color: rgba(143, 214, 255, 0.45);
+  color: var(--gcs-command);
+}
+
+/* =============================================================================
+   8. LISTS & ROWS (§6.7)
+   ============================================================================= */
+.gcs-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.gcs-list-label {
+  display: flex;
+  align-items: center;
+  gap: var(--gcs-gap-s);
+  padding: 7px 10px 5px;
+  font-family: var(--gcs-font-en);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--gcs-track-micro);
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.gcs-list-label::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--gcs-line-faint);
+}
+
+.gcs-list-label:first-child {
+  padding-top: 2px;
+}
+
+.gcs-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--gcs-gap-s);
+  min-height: var(--gcs-row-h);
+  padding: 0 10px;
+  color: var(--gcs-text-2);
+  font-size: 11.5px;
+  line-height: 1.35;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    background-color var(--gcs-fast) var(--gcs-ease),
+    color var(--gcs-fast) var(--gcs-ease),
+    box-shadow var(--gcs-fast) var(--gcs-ease);
+}
+
+.gcs-row:hover {
+  background-color: var(--gcs-panel-hover);
+  color: var(--gcs-text);
+}
+
+.gcs-row:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: -1px;
+}
+
+.gcs-row.is-selected {
+  background-color: rgba(95, 243, 228, 0.08);
+  color: var(--gcs-text);
+  box-shadow: inset 2px 0 0 var(--gcs-accent);
+}
+
+.gcs-row.is-selected:hover {
+  background-color: rgba(95, 243, 228, 0.12);
+}
+
+/* severity rows: 2px left bar + the faintest tint, no zebra striping */
+.gcs-row--warn {
+  box-shadow: inset 2px 0 0 rgba(255, 178, 87, 0.62);
+  background-color: rgba(255, 178, 87, 0.035);
+}
+
+.gcs-row--danger {
+  box-shadow: inset 2px 0 0 rgba(255, 93, 74, 0.72);
+  background-color: rgba(255, 93, 74, 0.045);
+}
+
+.gcs-row--warn.is-selected,
+.gcs-row--danger.is-selected {
+  box-shadow: inset 2px 0 0 var(--gcs-accent);
+}
+
+/* newly inserted event row: slide + one-shot severity bar flash */
+.gcs-row.is-new,
+.gcs-row--new {
+  animation: gcs-row-in var(--gcs-slow) var(--gcs-ease) both;
+}
+
+/* =============================================================================
+   9. SCROLLBARS (§6.8) — 4px rail, transparent track
+   -----------------------------------------------------------------------------
+   NOTE: layout.css sets a global `scrollbar-width: thin`; in Chromium any
+   non-auto scrollbar-width disables ::-webkit-scrollbar styling, so the GCS
+   tree re-asserts `auto` here (id specificity wins over layout's `*`) and the
+   4px rail below stays authoritative. Firefox gets the standard thin fallback.
+   ============================================================================= */
+#gcs-root,
+#gcs-root * {
+  scrollbar-width: auto;
+}
+
+#gcs-root *::-webkit-scrollbar {
+  width: var(--gcs-scroll-w);
+  height: var(--gcs-scroll-w);
+}
+
+#gcs-root *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#gcs-root *::-webkit-scrollbar-thumb {
+  background-color: rgba(140, 224, 238, 0.22);
+  border-radius: 999px;
+}
+
+#gcs-root *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(140, 224, 238, 0.4);
+}
+
+#gcs-root *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox / engines without the webkit pseudo: native thin scrollbar */
+@supports not selector(::-webkit-scrollbar) {
+  #gcs-root,
+  #gcs-root * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(140, 224, 238, 0.28) transparent;
+  }
+}
+
+/* =============================================================================
+   10. TYPOGRAPHIC UTILITIES (§3)
+   ============================================================================= */
+.gcs-mono {
+  font-family: var(--gcs-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gcs-en {
+  font-family: var(--gcs-font-en);
+  letter-spacing: var(--gcs-track-en);
+  text-transform: uppercase;
+}
+
+.gcs-label {
+  display: inline-block;
+  font-family: var(--gcs-font-cn);
+  font-size: var(--gcs-fs-micro);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+}
+
+.gcs-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--gcs-font-en);
+  font-size: var(--gcs-fs-hero);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gcs-text);
+}
+
+.gcs-figure--md {
+  font-size: var(--gcs-fs-figure);
+}
+
+.gcs-unit {
+  font-family: var(--gcs-font-en);
+  font-size: 0.72em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-3);
+}
+
+/* Icon wrapper produced by src/ui/icons.js. IMPORTANT: icons.js sets width/
+   height attributes per call site (icon(name, size)) — do not force a size in
+   CSS or every call site loses its sizing. */
+.gcs-icon {
+  display: block;
+  flex: 0 0 auto;
+  color: inherit;
+}
+
+.gcs-hair {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--gcs-line-faint);
+}
+
+/* text-colour utilities — use these instead of hard-coding token colours */
+.gcs-txt--2 {
+  color: var(--gcs-text-2);
+}
+
+.gcs-txt--3 {
+  color: var(--gcs-text-3);
+}
+
+.gcs-txt--4 {
+  color: var(--gcs-text-4);
+}
+
+.gcs-txt--accent {
+  color: var(--gcs-accent);
+}
+
+.gcs-txt--ok {
+  color: var(--gcs-ok);
+}
+
+.gcs-txt--warn {
+  color: var(--gcs-warn);
+}
+
+.gcs-txt--danger {
+  color: var(--gcs-danger);
+}
+
+.gcs-txt--cmd {
+  color: var(--gcs-command);
+}
+
+/* =============================================================================
+   11. ENTRANCE / FEEDBACK UTILITIES (§6.10)
+   ============================================================================= */
+.gcs-enter {
+  animation: gcs-fade-in var(--gcs-normal) var(--gcs-ease) both;
+  animation-delay: calc(var(--gcs-i, 0) * 40ms);
+}
+
+.gcs-flash {
+  animation: gcs-value-flash 300ms var(--gcs-ease) 1;
+}
+
+/* =============================================================================
+   12. KEYFRAMES
+   ============================================================================= */
+@keyframes gcs-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gcs-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gcs-dot-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes gcs-alarm-breath {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gcs-pending {
+  0%,
+  100% {
+    background-color: var(--gcs-text-3);
+    box-shadow: 5px 0 0 rgba(188, 220, 229, 0.28), 10px 0 0 rgba(188, 220, 229, 0.28);
+  }
+  33% {
+    background-color: rgba(188, 220, 229, 0.28);
+    box-shadow: 5px 0 0 var(--gcs-text-3), 10px 0 0 rgba(188, 220, 229, 0.28);
+  }
+  66% {
+    background-color: rgba(188, 220, 229, 0.28);
+    box-shadow: 5px 0 0 rgba(188, 220, 229, 0.28), 10px 0 0 var(--gcs-text-3);
+  }
+}
+
+@keyframes gcs-acked {
+  0% {
+    background-color: rgba(95, 243, 228, 0.2);
+    box-shadow: inset 0 0 0 1px var(--gcs-accent-line);
+    color: var(--gcs-accent);
+  }
+  100% {
+    background-color: transparent;
+    color: var(--gcs-text-2);
+  }
+}
+
+@keyframes gcs-row-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+    background-color: rgba(95, 243, 228, 0.12);
+    box-shadow: inset 2px 0 0 var(--gcs-accent);
+  }
+  70% {
+    opacity: 1;
+    background-color: rgba(95, 243, 228, 0.05);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    background-color: transparent;
+  }
+}
+
+@keyframes gcs-value-flash {
+  0% {
+    background-color: rgba(95, 243, 228, 0.16);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* =============================================================================
+   13. REDUCED MOTION (§6.10)
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .gcs-panel,
+  .gcs-panel--danger.is-critical::after,
+  .gcs-dot--danger,
+  .gcs-dot.is-pulse,
+  .gcs-btn.is-pending::after,
+  .gcs-btn.is-acked,
+  .gcs-row.is-new,
+  .gcs-row--new,
+  .gcs-enter,
+  .gcs-flash {
+    animation: none !important;
+  }
+
+  .gcs-btn,
+  .gcs-seg-item,
+  .gcs-row,
+  .gcs-bar-fill {
+    transition-duration: 0.01ms !important;
+  }
+}

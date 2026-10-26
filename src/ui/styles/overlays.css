@@ -1,0 +1,1171 @@
+/* =============================================================================
+   OVERLAYS — boot sequence / confirmation modal / help sheet / toast stack.
+   Module owner: ui-dock. Only .ovl-* selectors (plus published .gcs-* classes).
+   Design reference: docs/GCS-design-system.md §7.7 + §6 (material, motion).
+   ============================================================================= */
+
+/* =============================================================================
+   0. shared icon button
+   ============================================================================= */
+.ovl-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--gcs-text-3);
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.ovl-icon-btn:hover {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-line);
+  background-color: var(--gcs-accent-soft);
+}
+
+.ovl-icon-btn .gcs-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.ovl-icon-btn:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+/* =============================================================================
+   1. BOOT SEQUENCE (§7.7)
+   ============================================================================= */
+.ovl-boot {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--gcs-ink-1000);
+  color: var(--gcs-text);
+  cursor: pointer;
+  opacity: 1;
+  transition:
+    opacity 460ms var(--gcs-ease),
+    transform 460ms var(--gcs-ease);
+}
+
+.ovl-boot.is-out {
+  opacity: 0;
+  transform: translateY(-22px);
+  pointer-events: none;
+}
+
+/* --- atmosphere: a cold instrument glow over the deep ink ------------------ */
+.ovl-boot-atmos {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(46% 34% at 50% 42%, rgba(95, 243, 228, 0.1), rgba(95, 243, 228, 0) 68%),
+    radial-gradient(80% 52% at 50% 116%, rgba(14, 74, 96, 0.42), rgba(2, 11, 18, 0) 62%),
+    radial-gradient(120% 90% at 50% 50%, rgba(2, 11, 18, 0) 42%, rgba(1, 6, 10, 0.7) 100%);
+}
+
+.ovl-boot-atmos::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(140, 224, 238, 0.036) 0 1px, transparent 1px 58px),
+    repeating-linear-gradient(90deg, rgba(140, 224, 238, 0.036) 0 1px, transparent 1px 58px);
+  -webkit-mask-image: radial-gradient(58% 48% at 50% 46%, #000 10%, transparent 78%);
+  mask-image: radial-gradient(58% 48% at 50% 46%, #000 10%, transparent 78%);
+}
+
+.ovl-boot-atmos::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 58%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(95, 243, 228, 0.28), transparent);
+  opacity: 0.7;
+}
+
+/* --- drafting frame + corner brackets ------------------------------------- */
+.ovl-boot-frame {
+  position: absolute;
+  inset: 22px;
+  border: 1px solid rgba(140, 224, 238, 0.08);
+  pointer-events: none;
+}
+
+.ovl-boot-frame i {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 0 solid var(--gcs-accent-line);
+}
+
+.ovl-boot-frame i:nth-child(1) {
+  left: -1px;
+  top: -1px;
+  border-left-width: 1px;
+  border-top-width: 1px;
+}
+
+.ovl-boot-frame i:nth-child(2) {
+  right: -1px;
+  top: -1px;
+  border-right-width: 1px;
+  border-top-width: 1px;
+}
+
+.ovl-boot-frame i:nth-child(3) {
+  right: -1px;
+  bottom: -1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.ovl-boot-frame i:nth-child(4) {
+  left: -1px;
+  bottom: -1px;
+  border-left-width: 1px;
+  border-bottom-width: 1px;
+}
+
+/* --- HUD corner readouts --------------------------------------------------- */
+.ovl-boot-hud {
+  position: absolute;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  color: var(--gcs-text-3);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.ovl-boot-hud--tl {
+  left: 36px;
+}
+
+.ovl-boot-hud--tr {
+  right: 36px;
+  align-items: flex-end;
+}
+
+.ovl-boot-hud-line {
+  color: var(--gcs-text-4);
+  letter-spacing: 0.12em;
+}
+
+.ovl-boot-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--gcs-ok);
+}
+
+.ovl-boot-live i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gcs-ok);
+  box-shadow: 0 0 9px rgba(92, 232, 165, 0.7);
+  animation: ovl-boot-pulse 1.7s ease-in-out infinite;
+}
+
+/* --- center column --------------------------------------------------------- */
+.ovl-boot-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(720px, 82vw);
+  margin-top: -12px;
+  pointer-events: none;
+}
+
+.ovl-boot-emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 116px;
+  height: 116px;
+}
+
+.ovl-boot-emblem-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(95, 243, 228, 0.14);
+  border-radius: 50%;
+}
+
+.ovl-boot-emblem-ring--2 {
+  inset: 11px;
+  border-color: rgba(140, 224, 238, 0.12);
+  border-style: dashed;
+  animation: ovl-boot-spin 42s linear infinite;
+}
+
+.ovl-boot-emblem-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--gcs-accent);
+  filter: drop-shadow(0 0 18px rgba(95, 243, 228, 0.22));
+}
+
+.ovl-boot-emblem-icon .gcs-icon {
+  display: block;
+  width: 74px;
+  height: 74px;
+  overflow: visible;
+}
+
+.ovl-boot-emblem-icon svg path,
+.ovl-boot-emblem-icon svg circle {
+  stroke-dasharray: 240;
+  stroke-dashoffset: 240;
+  animation: ovl-boot-draw 1.6s var(--gcs-ease) 0.1s forwards;
+}
+
+.ovl-boot-title {
+  margin-top: 30px;
+  font-family: var(--gcs-font-en);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
+  color: var(--gcs-text);
+  white-space: nowrap;
+}
+
+.ovl-boot-rule {
+  position: relative;
+  width: 300px;
+  height: 1px;
+  margin: 20px 0 14px;
+  background: linear-gradient(90deg, transparent, var(--gcs-line-strong), transparent);
+}
+
+.ovl-boot-rule i {
+  position: absolute;
+  left: 50%;
+  top: -0.5px;
+  width: 52px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: var(--gcs-accent);
+  opacity: 0.75;
+  box-shadow: 0 0 9px rgba(95, 243, 228, 0.55);
+}
+
+.ovl-boot-sub {
+  font-family: var(--gcs-font-cn);
+  font-size: 10.5px;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  color: var(--gcs-text-3);
+}
+
+/* --- progress (1px rule + percentage) ------------------------------------- */
+.ovl-boot-progress {
+  position: relative;
+  width: 340px;
+  height: 1px;
+  margin-top: 40px;
+  background: rgba(140, 224, 238, 0.13);
+  overflow: visible;
+}
+
+.ovl-boot-progress-fill {
+  display: block;
+  width: 100%;
+  height: 1px;
+  transform: scaleX(0.005);
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(95, 243, 228, 0.4), var(--gcs-accent));
+  box-shadow: 0 0 10px rgba(95, 243, 228, 0.55);
+  will-change: transform;
+}
+
+.ovl-boot-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 340px;
+  margin-top: 10px;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+}
+
+.ovl-boot-pct {
+  color: var(--gcs-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ovl-boot-state {
+  color: var(--gcs-text-3);
+  letter-spacing: 0.14em;
+}
+
+/* --- system log lines ------------------------------------------------------ */
+.ovl-boot-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 340px;
+  min-height: 66px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-3);
+}
+
+.ovl-boot-log {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity var(--gcs-normal) var(--gcs-ease),
+    transform var(--gcs-normal) var(--gcs-ease);
+}
+
+.ovl-boot-log.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+.ovl-boot-log-mark {
+  width: 4px;
+  height: 4px;
+  flex: 0 0 auto;
+  background: var(--gcs-accent);
+  opacity: 0.65;
+}
+
+.ovl-boot-log.is-on .ovl-boot-log-mark {
+  box-shadow: 0 0 6px rgba(95, 243, 228, 0.6);
+}
+
+/* --- footer ---------------------------------------------------------------- */
+.ovl-boot-foot {
+  position: absolute;
+  left: 36px;
+  right: 36px;
+  bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--gcs-text-4);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.ovl-boot-skip {
+  color: var(--gcs-text-3);
+  transition: color var(--gcs-normal) var(--gcs-ease);
+}
+
+.ovl-boot:hover .ovl-boot-skip {
+  color: var(--gcs-accent-2);
+}
+
+/* =============================================================================
+   2. MODAL SCRIM — shared by confirm + help
+   ============================================================================= */
+.ovl-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(1, 7, 11, 0.68);
+  -webkit-backdrop-filter: blur(4px) saturate(1.05);
+  backdrop-filter: blur(4px) saturate(1.05);
+  animation: ovl-scrim-in 180ms var(--gcs-ease) both;
+}
+
+/* =============================================================================
+   3. CONFIRMATION MODAL (§7.7)
+   ============================================================================= */
+.ovl-dialog {
+  position: relative;
+  width: 420px;
+  max-width: min(92vw, 460px);
+  border: 1px solid var(--gcs-line-strong);
+  border-radius: var(--gcs-radius);
+  background-color: var(--gcs-panel-strong);
+  background-image: var(--gcs-sheen);
+  box-shadow:
+    0 0 0 1px var(--gcs-edge-dark),
+    var(--gcs-shadow-pop),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  animation: ovl-dialog-in 220ms var(--gcs-ease) both;
+}
+
+/* four drafting corner brackets, matching the panel language */
+.ovl-dialog::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 10px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 1px 10px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 10px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 1px 10px no-repeat;
+  opacity: 0.7;
+}
+
+.ovl-dialog--danger {
+  border-top: 2px solid rgba(255, 93, 74, 0.85);
+  background-image:
+    linear-gradient(180deg, rgba(255, 93, 74, 0.07), rgba(255, 93, 74, 0) 34%),
+    var(--gcs-sheen);
+  box-shadow:
+    0 0 0 1px var(--gcs-edge-dark),
+    0 0 34px rgba(255, 93, 74, 0.12),
+    var(--gcs-shadow-pop),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+}
+
+.ovl-dialog--danger::before {
+  background:
+    linear-gradient(rgba(255, 93, 74, 0.42), rgba(255, 93, 74, 0.42)) left top / 10px 1px no-repeat,
+    linear-gradient(rgba(255, 93, 74, 0.42), rgba(255, 93, 74, 0.42)) left top / 1px 10px no-repeat,
+    linear-gradient(rgba(255, 93, 74, 0.42), rgba(255, 93, 74, 0.42)) right bottom / 10px 1px no-repeat,
+    linear-gradient(rgba(255, 93, 74, 0.42), rgba(255, 93, 74, 0.42)) right bottom / 1px 10px no-repeat;
+}
+
+/* --- head ------------------------------------------------------------------ */
+.ovl-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 15px 12px 16px;
+  border-bottom: 1px solid var(--gcs-line-faint);
+}
+
+.ovl-dialog-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--gcs-line);
+  border-radius: 2px;
+  background: rgba(95, 243, 228, 0.05);
+  color: var(--gcs-accent-2);
+}
+
+.ovl-dialog-icon .gcs-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.ovl-dialog--danger .ovl-dialog-icon {
+  border-color: rgba(255, 93, 74, 0.42);
+  background: rgba(255, 93, 74, 0.08);
+  color: var(--gcs-danger);
+}
+
+.ovl-dialog-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ovl-dialog-kicker {
+  font-family: var(--gcs-font-en);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+}
+
+.ovl-dialog--danger .ovl-dialog-kicker {
+  color: rgba(255, 93, 74, 0.82);
+}
+
+.ovl-dialog-title {
+  margin: 6px 0 0;
+  font-family: var(--gcs-font-cn);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+}
+
+/* --- body ------------------------------------------------------------------ */
+.ovl-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 16px 6px;
+}
+
+.ovl-dialog-msg {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--gcs-text-2);
+}
+
+.ovl-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ovl-dialog-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--gcs-text-3);
+}
+
+.ovl-dialog-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  background: var(--gcs-accent);
+  opacity: 0.7;
+}
+
+.ovl-dialog--danger .ovl-dialog-list li::before {
+  background: var(--gcs-danger);
+  opacity: 0.85;
+}
+
+/* --- foot + buttons -------------------------------------------------------- */
+.ovl-dialog-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 14px;
+  margin-top: 8px;
+  border-top: 1px solid var(--gcs-line-faint);
+}
+
+.ovl-dialog-hint {
+  margin-right: auto;
+  min-width: 0;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ovl-dialog--danger .ovl-dialog-hint {
+  color: rgba(255, 160, 145, 0.55);
+}
+
+.ovl-dialog-cancel {
+  min-width: 72px;
+  height: 30px;
+}
+
+.ovl-dialog-confirm {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 148px;
+  height: 30px;
+  padding: 0 14px;
+  overflow: hidden;
+  font-size: 11.5px;
+}
+
+.ovl-dialog-confirm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: scaleX(var(--ovl-hold-progress, 0));
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(255, 93, 74, 0.34), rgba(255, 93, 74, 0.14));
+  pointer-events: none;
+}
+
+.ovl-dialog-confirm .ovl-dialog-confirm-label {
+  position: relative;
+  z-index: 1;
+}
+
+.ovl-dialog-confirm.is-hold:not(.is-holding)::before {
+  transition: transform 200ms var(--gcs-ease);
+}
+
+.ovl-dialog-confirm.is-holding {
+  border-color: rgba(255, 93, 74, 0.85);
+  color: var(--gcs-danger);
+  box-shadow: inset 0 0 0 1px rgba(255, 93, 74, 0.25), 0 0 18px rgba(255, 93, 74, 0.14);
+}
+
+/* progress ring inside the hold button */
+.ovl-hold-ring {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.ovl-hold-ring svg {
+  width: 16px;
+  height: 16px;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+.ovl-hold-ring circle {
+  fill: none;
+  stroke-width: 2;
+}
+
+.ovl-hold-track {
+  stroke: rgba(255, 93, 74, 0.22);
+}
+
+.ovl-hold-fill {
+  stroke: var(--gcs-danger);
+  stroke-linecap: round;
+  stroke-dasharray: 56.55;
+  stroke-dashoffset: 56.55;
+}
+
+/* alert variant (single acknowledgement button) */
+.ovl-dialog--alert {
+  width: 380px;
+}
+
+/* =============================================================================
+   4. HELP SHEET (§7.7)
+   ============================================================================= */
+.ovl-scrim--help {
+  background: rgba(1, 7, 11, 0.74);
+  -webkit-backdrop-filter: blur(6px) saturate(1.05);
+  backdrop-filter: blur(6px) saturate(1.05);
+}
+
+.ovl-help {
+  display: flex;
+  flex-direction: column;
+  width: 860px;
+  max-width: calc(100vw - 64px);
+  height: 560px;
+  max-height: calc(100vh - 96px);
+  overflow: hidden;
+  border: 1px solid var(--gcs-line-strong);
+  border-radius: var(--gcs-radius);
+  background-color: var(--gcs-panel-strong);
+  background-image: var(--gcs-sheen);
+  box-shadow:
+    0 0 0 1px var(--gcs-edge-dark),
+    var(--gcs-shadow-pop),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  animation: ovl-help-in 240ms var(--gcs-ease) both;
+}
+
+.ovl-help-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  height: 54px;
+  padding: 0 14px 0 18px;
+  border-bottom: 1px solid var(--gcs-line);
+  background: linear-gradient(180deg, rgba(160, 240, 250, 0.045), rgba(160, 240, 250, 0.004));
+}
+
+.ovl-help-head::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -1px;
+  width: 34px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gcs-accent), rgba(95, 243, 228, 0));
+  opacity: 0.8;
+}
+
+.ovl-help-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0 5px;
+  border: 1px solid var(--gcs-line-faint);
+  border-radius: 2px;
+  background: rgba(2, 11, 18, 0.22);
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--gcs-text-3);
+}
+
+.ovl-help-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--gcs-font-cn);
+  font-size: var(--gcs-fs-title);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+}
+
+.ovl-help-title em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: var(--gcs-fs-micro);
+  font-weight: 500;
+  letter-spacing: var(--gcs-track-micro);
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+}
+
+.ovl-help-version {
+  margin-left: auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+.ovl-help-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 20px 16px;
+}
+
+.ovl-help-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 30px;
+}
+
+.ovl-help-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 6px;
+  border-bottom: 1px solid var(--gcs-line-faint);
+}
+
+.ovl-help-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-width: 124px;
+}
+
+.ovl-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--gcs-line-strong);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+  background: rgba(2, 11, 18, 0.55);
+  box-shadow: inset 0 1px 0 rgba(180, 244, 252, 0.07);
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--gcs-accent-2);
+  white-space: nowrap;
+}
+
+.ovl-help-keysep {
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  color: var(--gcs-text-4);
+}
+
+.ovl-help-label {
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--gcs-text-2);
+}
+
+.ovl-help-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  height: 46px;
+  padding: 0 18px;
+  border-top: 1px solid var(--gcs-line-faint);
+  background: rgba(2, 11, 18, 0.18);
+}
+
+.ovl-help-foot-brand {
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.ovl-help-foot-hint {
+  margin-left: auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+.ovl-help-close {
+  flex: 0 0 auto;
+}
+
+/* =============================================================================
+   5. TOAST STACK (§7.7)
+   ============================================================================= */
+.ovl-toasts {
+  position: absolute;
+  top: calc(var(--gcs-topbar-h) + 12px);
+  right: 12px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 300px;
+  pointer-events: none;
+}
+
+.ovl-toast {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 28px 10px 14px;
+  overflow: hidden;
+  border: 1px solid var(--gcs-line);
+  border-radius: 3px;
+  background-color: var(--gcs-panel-strong);
+  background-image: var(--gcs-sheen);
+  box-shadow:
+    0 0 0 1px var(--gcs-edge-dark),
+    0 14px 34px rgba(0, 0, 0, 0.42);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  pointer-events: auto;
+  animation: ovl-toast-in 240ms var(--gcs-ease) both;
+}
+
+.ovl-toast.is-out {
+  animation: ovl-toast-out 240ms var(--gcs-ease) both;
+}
+
+.ovl-toast-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ovl-sev, var(--gcs-accent-2));
+}
+
+.ovl-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border: 1px solid color-mix(in srgb, var(--ovl-sev, var(--gcs-accent-2)) 34%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ovl-sev, var(--gcs-accent-2)) 8%, transparent);
+  color: var(--ovl-sev, var(--gcs-accent-2));
+}
+
+.ovl-toast-icon .gcs-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.ovl-toast-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ovl-toast-title {
+  font-family: var(--gcs-font-cn);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+  overflow-wrap: anywhere;
+}
+
+.ovl-toast-msg {
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--gcs-text-3);
+  overflow-wrap: anywhere;
+}
+
+.ovl-toast-x {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  color: var(--gcs-text-4);
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.ovl-toast-x:hover {
+  color: var(--gcs-text-2);
+  background: rgba(140, 224, 238, 0.08);
+}
+
+.ovl-toast-x .gcs-icon {
+  width: 9px;
+  height: 9px;
+}
+
+.ovl-toast--info {
+  --ovl-sev: var(--gcs-accent-2);
+}
+
+.ovl-toast--success {
+  --ovl-sev: var(--gcs-ok);
+}
+
+.ovl-toast--warning {
+  --ovl-sev: var(--gcs-warn);
+}
+
+.ovl-toast--critical {
+  --ovl-sev: var(--gcs-danger);
+}
+
+.ovl-toast--command {
+  --ovl-sev: var(--gcs-command);
+}
+
+/* =============================================================================
+   6. KEYFRAMES
+   ============================================================================= */
+@keyframes ovl-boot-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ovl-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ovl-boot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+
+@keyframes ovl-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ovl-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ovl-help-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ovl-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ovl-toast-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+/* =============================================================================
+   7. RESPONSIVE + REDUCED MOTION
+   ============================================================================= */
+@media (max-height: 800px) {
+  .ovl-boot-title {
+    margin-top: 22px;
+    font-size: 23px;
+  }
+
+  .ovl-boot-emblem {
+    width: 96px;
+    height: 96px;
+  }
+
+  .ovl-boot-emblem-icon .gcs-icon {
+    width: 62px;
+    height: 62px;
+  }
+
+  .ovl-boot-progress {
+    margin-top: 28px;
+  }
+
+  .ovl-boot-logs {
+    margin-top: 20px;
+    min-height: 58px;
+  }
+
+  .ovl-help {
+    height: calc(100vh - 72px);
+  }
+}
+
+@media (max-width: 1280px) {
+  .ovl-boot-hud--tr {
+    display: none;
+  }
+
+  .ovl-help {
+    width: calc(100vw - 48px);
+  }
+
+  .ovl-toasts {
+    width: 280px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ovl-boot,
+  .ovl-boot-emblem-icon svg path,
+  .ovl-boot-emblem-icon svg circle,
+  .ovl-boot-emblem-ring--2,
+  .ovl-boot-live i,
+  .ovl-scrim,
+  .ovl-dialog,
+  .ovl-help,
+  .ovl-toast,
+  .ovl-toast.is-out {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .ovl-boot-log {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .ovl-dialog-confirm.is-hold:not(.is-holding)::before {
+    transition: none;
+  }
+}

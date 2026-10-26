@@ -1,0 +1,131 @@
+/* =============================================================================
+   OceanSwarm GCS — design tokens
+   Owner: design · contract: docs/GCS-design-system.md §2/§3
+   -----------------------------------------------------------------------------
+   This file is the SINGLE source of truth for colour, type, spacing, motion and
+   material constants. Module CSS must reference these variables and must not
+   invent new primary colours. Semantic additions require the design owner.
+   ============================================================================= */
+
+:root {
+  /* ==========================================================================
+     1. SURFACES — deep-sea glass
+     ========================================================================== */
+  --gcs-ink-1000: #020b12;                  /* boot / deepest mask            */
+  --gcs-ink-950: #04121b;
+  --gcs-ink-900: #06202c;
+  --gcs-panel: rgba(4, 17, 25, 0.74);       /* panel body                     */
+  --gcs-panel-strong: rgba(3, 13, 20, 0.9); /* topbar / dock / popovers       */
+  --gcs-panel-soft: rgba(10, 34, 46, 0.55); /* inset blocks                   */
+  --gcs-panel-hover: rgba(16, 52, 66, 0.55);
+  --gcs-sheen: linear-gradient(180deg, rgba(160, 240, 250, 0.07), rgba(160, 240, 250, 0) 42%);
+
+  /* ==========================================================================
+     2. LINES & DIVIDERS
+     ========================================================================== */
+  --gcs-line: rgba(140, 224, 238, 0.14);
+  --gcs-line-strong: rgba(140, 224, 238, 0.3);
+  --gcs-line-faint: rgba(140, 224, 238, 0.07);
+
+  /* ==========================================================================
+     3. TEXT
+     ========================================================================== */
+  --gcs-text: #eaf7f7;
+  --gcs-text-2: rgba(212, 236, 241, 0.68);
+  --gcs-text-3: rgba(188, 220, 229, 0.44);
+  --gcs-text-4: rgba(168, 204, 214, 0.28);
+
+  /* ==========================================================================
+     4. ACCENTS
+     ========================================================================== */
+  --gcs-accent: #5ff3e4;                    /* primary: data / selected / live */
+  --gcs-accent-2: #9fd6e8;                  /* ice blue: latin labels, scales  */
+  --gcs-accent-soft: rgba(95, 243, 228, 0.14);
+  --gcs-accent-line: rgba(95, 243, 228, 0.42);
+  --gcs-command: #8fd6ff;                   /* command-severity events         */
+
+  /* ==========================================================================
+     5. SEMANTIC STATUS
+     ========================================================================== */
+  --gcs-ok: #5ce8a5;
+  --gcs-warn: #ffb257;
+  --gcs-danger: #ff5d4a;
+  --gcs-gold: #ffd27a;
+  --gcs-offline: rgba(170, 196, 204, 0.45);
+
+  /* ==========================================================================
+     6. VESSEL-TYPE COLOURS (roster / map / detail must stay in sync)
+     ========================================================================== */
+  --gcs-type-flagship: #ffd27a;
+  --gcs-type-scout: #5ff3e4;
+  --gcs-type-env: #7ee0b8;
+  --gcs-type-survey: #9fd6e8;
+  --gcs-type-patrol: #ffb257;
+  --gcs-type-comms: #c1a7ff;
+  --gcs-type-energy: #ffcf6e;
+  --gcs-type-rescue: #ff9a8a;
+
+  /* ==========================================================================
+     7. LAYOUT DIMENSIONS (1600×900 baseline)
+     ========================================================================== */
+  --gcs-topbar-h: 64px;
+  --gcs-rail-l: 300px;
+  --gcs-rail-r: 332px;
+  --gcs-dock-h: 196px;
+  --gcs-gap: 12px;
+  --gcs-pad: 14px;
+  --gcs-radius: 4px;
+  --gcs-radius-s: 2px;
+  --gcs-hair: 1px;
+
+  /* component metrics — shared so every module keeps the same rhythm */
+  --gcs-panel-head-h: 34px;
+  --gcs-pad-sm: 10px;
+  --gcs-gap-s: 8px;
+  --gcs-gap-xs: 6px;
+  --gcs-btn-h: 26px;
+  --gcs-row-h: 26px;
+  --gcs-bar-h: 3px;
+  --gcs-dot: 6px;
+  --gcs-chip-h: 18px;
+  --gcs-corner: 10px;                       /* drafting corner bracket leg     */
+  --gcs-scroll-w: 4px;
+
+  /* ==========================================================================
+     8. TYPE
+     ========================================================================== */
+  --gcs-font-cn: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  --gcs-font-en: "Bahnschrift", "Segoe UI Semibold", "Segoe UI", var(--gcs-font-cn);
+  --gcs-font-mono: "Cascadia Mono", "Consolas", "SFMono-Regular", var(--gcs-font-cn);
+  --gcs-fs-micro: 9.5px;
+  --gcs-fs-small: 11px;
+  --gcs-fs-body: 12.5px;
+  --gcs-fs-title: 13.5px;
+  --gcs-fs-figure: 17px;                    /* medium readout                  */
+  --gcs-fs-hero: 30px;                      /* hero readout                    */
+  --gcs-track-micro: 0.16em;                /* latin micro labels              */
+  --gcs-track-en: 0.12em;
+  --gcs-track-tight: 0.02em;
+
+  /* ==========================================================================
+     9. MATERIAL / DEPTH
+     ========================================================================== */
+  --gcs-blur: 18px;
+  --gcs-saturate: 1.15;
+  --gcs-edge-dark: rgba(2, 11, 18, 0.32);   /* dark outer ring: separates glass from bright sea */
+  --gcs-inner-highlight: rgba(180, 244, 252, 0.1); /* 1px top inner highlight     */
+  --gcs-shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.38), 0 2px 8px rgba(0, 0, 0, 0.22);
+  --gcs-shadow-pop: 0 26px 70px rgba(0, 0, 0, 0.55);
+  --gcs-focus-ring: 0 0 0 1px var(--gcs-accent-line), 0 0 0 3px rgba(95, 243, 228, 0.1);
+
+  /* ==========================================================================
+     10. MOTION
+     ========================================================================== */
+  --gcs-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --gcs-fast: 120ms;
+  --gcs-normal: 220ms;
+  --gcs-slow: 420ms;
+  --gcs-alarm-dur: 1.6s;                    /* critical breathing period        */
+
+  color-scheme: dark;
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#04121b" />
+    <title>OceanSwarm GCS · 无人艇集群上位机</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #04121b;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #app canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        outline: none;
+      }
+      /* Pre-JS splash: fades out as soon as the console boots. */
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        background: radial-gradient(120% 90% at 50% 46%, #071c26 0%, #030d13 72%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 420ms ease;
+        pointer-events: none;
+      }
+      #boot-splash .line {
+        width: 168px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(95, 243, 228, 0.5), transparent);
+        margin-top: 18px;
+        animation: splash-pulse 1.4s ease-in-out infinite;
+      }
+      #boot-splash .mark {
+        font-family: "Bahnschrift", "Segoe UI", sans-serif;
+        font-size: 13px;
+        letter-spacing: 0.34em;
+        color: rgba(214, 236, 241, 0.72);
+        text-transform: uppercase;
+      }
+      #boot-splash .sub {
+        margin-top: 8px;
+        font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+        font-size: 10px;
+        letter-spacing: 0.28em;
+        color: rgba(160, 200, 212, 0.4);
+      }
+      #boot-splash .col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      @keyframes splash-pulse {
+        0%,
+        100% {
+          opacity: 0.25;
+          transform: scaleX(0.7);
+        }
+        50% {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+      }
+      body.gcs-ready #boot-splash {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="boot-splash" aria-hidden="true">
+      <div class="col">
+        <div class="mark">OceanSwarm</div>
+        <div class="sub">无人艇集群上位机 · 正在接入</div>
+        <div class="line"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

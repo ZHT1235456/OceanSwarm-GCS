@@ -1,0 +1,862 @@
+/* =============================================================================
+   OceanSwarm GCS — right rail / VESSEL DETAIL panel (owner: ui-detail)
+   Private classes only (.detail-*); shared components come from base.css.
+   Layout contract: mount into #gcs-right (332px, 304px below 1500px), full
+   height, internal vertical scroll, never horizontally overflowing.
+   ============================================================================= */
+
+.detail-panel {
+  --detail-type: var(--gcs-accent);
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* [hidden] must win over the module's flex/grid display rules. */
+.detail-empty[hidden],
+.detail-content[hidden],
+.detail-recover[hidden] {
+  display: none !important;
+}
+
+/* =============================================================================
+   0. BODY / EMPTY STATE
+   ============================================================================= */
+.detail-body {
+  gap: 0;
+  padding: 11px 12px 14px 13px;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.detail-content.is-entering {
+  animation: detail-enter 180ms var(--gcs-ease) both;
+}
+
+.detail-empty {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px 4px;
+  min-width: 0;
+}
+
+.detail-empty-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 30px 16px 26px;
+  border: 1px dashed var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(95, 243, 228, 0.045), rgba(95, 243, 228, 0) 62%),
+    rgba(3, 13, 20, 0.22);
+  text-align: center;
+}
+
+.detail-empty-icon {
+  display: inline-flex;
+  color: var(--gcs-accent-2);
+  opacity: 0.42;
+}
+
+.detail-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-2);
+}
+
+.detail-empty-hint {
+  max-width: 214px;
+  font-size: 10.5px;
+  line-height: 1.8;
+  color: var(--gcs-text-3);
+}
+
+.detail-empty-en {
+  margin-top: 4px;
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  letter-spacing: var(--gcs-track-micro);
+  color: var(--gcs-text-4);
+}
+
+/* =============================================================================
+   1. IDENTITY — type rail + call sign + class chip + status
+   ============================================================================= */
+.detail-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 1px 0 10px;
+  min-width: 0;
+}
+
+.detail-typebar {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 3px;
+  min-height: 38px;
+  border-radius: 1px;
+  background: var(--detail-type);
+  opacity: 0.92;
+  box-shadow: 0 0 9px color-mix(in srgb, var(--detail-type) 50%, transparent);
+}
+
+.detail-id-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.detail-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detail-id-row--sub {
+  gap: 9px;
+}
+
+.detail-callsign {
+  font-family: var(--gcs-font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0.015em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-type-chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: 16px;
+  font-size: 8.5px;
+  color: var(--detail-type);
+  border-color: color-mix(in srgb, var(--detail-type) 42%, transparent);
+}
+
+.detail-name {
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.detail-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.detail-status .gcs-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.detail-status-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--gcs-font-en);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-3);
+}
+
+.detail-lock {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 1px;
+  color: var(--gcs-text-3);
+}
+
+.detail-lock.is-active {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-accent-line);
+  background-color: var(--gcs-accent-soft);
+}
+
+/* =============================================================================
+   2. HERO READOUTS — speed / heading / battery ring
+   ============================================================================= */
+.detail-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr 62px;
+  align-items: end;
+  gap: 4px 10px;
+  padding: 5px 0 7px;
+  min-width: 0;
+}
+
+.detail-hero-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.detail-hero-cell--rule {
+  border-left: 1px solid var(--gcs-line-faint);
+  padding-left: 11px;
+}
+
+.detail-hero-cell--ring {
+  align-items: flex-end;
+}
+
+.detail-hero-label {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 9.5px;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.detail-hero-label em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  letter-spacing: var(--gcs-track-micro);
+  color: var(--gcs-text-4);
+}
+
+.detail-hero-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--gcs-font-en);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-hero-figure b {
+  font-weight: 500;
+}
+
+.detail-hero-figure--hero {
+  font-size: var(--gcs-fs-hero);
+}
+
+.detail-hero-figure--hero b {
+  letter-spacing: -0.02em;
+}
+
+.detail-hero-figure .gcs-unit {
+  font-size: 10.5px;
+}
+
+.detail-ring {
+  display: block;
+  width: 52px;
+  height: 52px;
+  margin-top: 1px;
+}
+
+/* =============================================================================
+   3. SUB STATS — distance / along-track / payloads online
+   ============================================================================= */
+.detail-substats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 7px 0 8px;
+  border-top: 1px solid var(--gcs-line-faint);
+  border-bottom: 1px solid var(--gcs-line-faint);
+  min-width: 0;
+}
+
+.detail-substat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 9px;
+}
+
+.detail-substat:first-child {
+  padding-left: 1px;
+}
+
+.detail-substat + .detail-substat {
+  border-left: 1px solid var(--gcs-line-faint);
+}
+
+.detail-substat-k {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 8.5px;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.detail-substat-k em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-4);
+}
+
+.detail-substat-v {
+  font-family: var(--gcs-font-mono);
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =============================================================================
+   4. SECTION SCAFFOLDING
+   ============================================================================= */
+.detail-sec {
+  border-top: 1px solid var(--gcs-line-faint);
+  margin-top: 10px;
+  padding-top: 8px;
+  min-width: 0;
+}
+
+.detail-sec:first-of-type {
+  border-top: 0;
+  margin-top: 9px;
+  padding-top: 0;
+}
+
+.detail-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+  min-width: 0;
+}
+
+.detail-sec-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--gcs-accent-2);
+  opacity: 0.52;
+}
+
+.detail-sec-icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.detail-sec-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.detail-sec-title em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: var(--gcs-track-micro);
+  color: var(--gcs-text-4);
+}
+
+.detail-sec-meta {
+  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: var(--gcs-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.015em;
+  color: var(--gcs-text-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =============================================================================
+   5. ATTITUDE — artificial horizon + pitch / roll / heave
+   ============================================================================= */
+.detail-attitude {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+}
+
+.detail-horizon {
+  display: block;
+  flex: 0 0 auto;
+  width: 132px;
+  height: 66px;
+  border-radius: var(--gcs-radius-s);
+  background: var(--gcs-ink-1000);
+}
+
+.detail-attitude-kv {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 1px 0;
+}
+
+.detail-attitude-kv .gcs-kv {
+  min-height: 20px;
+  padding: 0;
+}
+
+.detail-attitude-kv .gcs-kv-k {
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+}
+
+.detail-attitude-kv .gcs-kv-v {
+  font-size: 11.5px;
+}
+
+/* =============================================================================
+   6. DATA LINK — 5-bar meter, RSSI, latency / loss / relay
+   ============================================================================= */
+.detail-link-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 5px;
+  min-width: 0;
+}
+
+.detail-signal {
+  display: block;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 18px;
+}
+
+.detail-link-rssi {
+  font-family: var(--gcs-font-mono);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-link-chip {
+  margin-left: auto;
+  height: 16px;
+  font-size: 8.5px;
+}
+
+.detail-kv-grid {
+  display: grid;
+  min-width: 0;
+}
+
+.detail-kv-grid .gcs-kv {
+  min-height: 20px;
+  padding: 0;
+}
+
+.detail-kv-grid .gcs-kv-k {
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+}
+
+.detail-kv-grid .gcs-kv-v {
+  font-size: 11px;
+}
+
+.detail-kv-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 10px;
+}
+
+.detail-kv-grid--3 .gcs-kv {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 0;
+}
+
+.detail-kv-grid--3 .gcs-kv-v {
+  font-size: 11.5px;
+}
+
+.detail-kv-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+  margin-top: 6px;
+}
+
+/* =============================================================================
+   7. ENERGY — history area chart + electrical readouts
+   ============================================================================= */
+.detail-energy {
+  display: block;
+  width: 100%;
+  height: 46px;
+  margin-top: 1px;
+}
+
+/* =============================================================================
+   8. PAYLOAD — sensor rows with capsule switches (state confirmed by snapshot)
+   ============================================================================= */
+.detail-sensors {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0 -4px;
+}
+
+.detail-sensor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 4px;
+  border-top: 1px solid var(--gcs-line-faint);
+  border-radius: 2px;
+  transition: background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.detail-sensor:first-child {
+  border-top: 0;
+}
+
+.detail-sensor:hover {
+  background-color: var(--gcs-panel-hover);
+}
+
+.detail-sensor.is-pending {
+  background-color: rgba(95, 243, 228, 0.05);
+}
+
+.detail-sensor-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--gcs-text-3);
+}
+
+.detail-sensor-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.detail-sensor-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.detail-sensor-cn {
+  font-size: 11.5px;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.detail-sensor-short {
+  font-style: normal;
+  font-family: var(--gcs-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+.detail-sensor-state {
+  flex: 0 0 auto;
+  height: 16px;
+  font-size: 8.5px;
+  color: var(--gcs-text-3);
+}
+
+/* capsule switch: 26×14, on = accent, pending until the next snapshot agrees */
+.detail-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--gcs-line-strong);
+  border-radius: 7px;
+  background-color: rgba(140, 224, 238, 0.06);
+  cursor: pointer;
+  transition:
+    background-color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.detail-switch-knob {
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--gcs-text-3);
+  transition:
+    transform var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.detail-switch:hover {
+  border-color: var(--gcs-accent-line);
+}
+
+.detail-switch.is-on {
+  background-color: var(--gcs-accent-soft);
+  border-color: var(--gcs-accent-line);
+}
+
+.detail-switch.is-on .detail-switch-knob {
+  transform: translateX(11px);
+  background-color: var(--gcs-accent);
+  box-shadow: 0 0 5px rgba(95, 243, 228, 0.5);
+}
+
+.detail-switch.is-pending {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.detail-switch.is-pending .detail-switch-knob {
+  animation: detail-knob-pulse 900ms ease-in-out infinite;
+}
+
+.detail-switch:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+/* =============================================================================
+   9. COMMANDS — 3×2 action grid + conditional takeover release
+   ============================================================================= */
+.detail-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.detail-action-btn {
+  height: 30px;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 0 6px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+}
+
+.detail-action-btn .gcs-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.8;
+}
+
+.detail-action-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-recover {
+  width: 100%;
+  height: 28px;
+  margin-top: 7px;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.detail-recover em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+/* =============================================================================
+   10. RAW PARAMETERS — collapsed mono table
+   ============================================================================= */
+.detail-raw {
+  margin-top: 11px;
+  border-top: 1px solid var(--gcs-line-faint);
+  padding-top: 1px;
+  min-width: 0;
+}
+
+.detail-raw-sum {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.detail-raw-sum::-webkit-details-marker {
+  display: none;
+}
+
+.detail-raw-sum:hover .detail-raw-title {
+  color: var(--gcs-text-2);
+}
+
+.detail-raw-sum:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: -1px;
+}
+
+.detail-raw-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.detail-raw-title em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  letter-spacing: var(--gcs-track-micro);
+  color: var(--gcs-text-4);
+}
+
+.detail-raw-chev {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--gcs-text-4);
+  transition: transform var(--gcs-fast) var(--gcs-ease);
+}
+
+.detail-raw-chev svg {
+  width: 12px;
+  height: 12px;
+}
+
+.detail-raw[open] .detail-raw-chev {
+  transform: rotate(180deg);
+}
+
+.detail-raw-grid {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 2px 10px;
+  padding: 3px 0 7px;
+  min-width: 0;
+}
+
+.detail-raw-row {
+  display: contents;
+}
+
+.detail-raw-k {
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-4);
+}
+
+.detail-raw-v {
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--gcs-text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* =============================================================================
+   11. MOTION
+   ============================================================================= */
+@keyframes detail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes detail-knob-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-content.is-entering {
+    animation: none !important;
+  }
+
+  .detail-switch.is-pending .detail-switch-knob {
+    animation: none !important;
+  }
+
+  .detail-raw-chev,
+  .detail-switch,
+  .detail-switch-knob {
+    transition-duration: 0.01ms !important;
+  }
+}

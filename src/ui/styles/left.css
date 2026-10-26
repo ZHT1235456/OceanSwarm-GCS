@@ -1,0 +1,726 @@
+/* =============================================================================
+   OceanSwarm GCS — LEFT RAIL (owner: ui-left)
+   Mission card · fleet roster · formation control.
+   Only this module's `.left-*` classes and the published `.gcs-*` base classes
+   are used; every colour/size comes from tokens.css.
+   Layout target: 300px rail (272 / 252 under the shared media queries), full
+   height, mission + formation cards fixed, roster scrolls internally so the
+   rail itself never overflows.
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Rail slots — the host (#gcs-left) is a flex column with a 12px gap.
+   --------------------------------------------------------------------------- */
+.gcs-panel.left-mission {
+  flex: 0 0 auto;
+}
+
+.gcs-panel.left-fleet {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.gcs-panel.left-formation {
+  flex: 0 0 auto;
+}
+
+.left-mission .gcs-panel-head,
+.left-fleet .gcs-panel-head,
+.left-formation .gcs-panel-head {
+  padding: 0 12px;
+}
+
+/* =============================================================================
+   1 · MISSION CARD (~133px)
+   ============================================================================= */
+.gcs-panel-body.left-mission-body {
+  gap: 0;
+  padding: 8px 12px 9px;
+  overflow: hidden;
+}
+
+.left-mission-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.left-mission-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-mission-code {
+  flex: 0 0 auto;
+  margin-left: auto;
+  letter-spacing: 0.1em;
+}
+
+.left-mission-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  margin-top: 1px;
+  line-height: 13px;
+}
+
+.left-mission-area {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.left-mission-area-en {
+  overflow: hidden;
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-4);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- phase ticks + current phase readout ---------------------------------- */
+.left-phase {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 14px;
+  margin-top: 6px;
+}
+
+.left-phase-bar {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.left-phase-seg {
+  position: relative;
+  display: block;
+  flex: 1 1 0;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 1px;
+  background-color: rgba(140, 224, 238, 0.12);
+  transition: background-color var(--gcs-normal) var(--gcs-ease);
+}
+
+.left-phase-seg.is-done {
+  background-color: rgba(95, 243, 228, 0.36);
+}
+
+.left-phase-seg.is-current {
+  background-image: linear-gradient(
+    90deg,
+    var(--gcs-accent) 0 calc(var(--left-phase-fill, 1) * 100%),
+    rgba(140, 224, 238, 0.16) calc(var(--left-phase-fill, 1) * 100%) 100%
+  );
+  box-shadow: 0 0 8px rgba(95, 243, 228, 0.38);
+}
+
+.left-phase-label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.left-phase-idx {
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.left-phase-name {
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-3);
+}
+
+/* --- MET / waypoint / map shortcut ---------------------------------------- */
+.left-mission-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 24px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.left-metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.left-metric-k {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--gcs-text-4);
+  text-transform: uppercase;
+}
+
+.left-metric b {
+  font-family: var(--gcs-font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.left-mission-foot .left-metric:first-child b {
+  color: var(--gcs-text);
+}
+
+.left-mission-foot b.left-wp-id {
+  color: var(--gcs-accent-2);
+}
+
+.left-wp-name {
+  max-width: 62px;
+  overflow: hidden;
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-3);
+  text-overflow: ellipsis;
+}
+
+.left-map-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
+  height: 22px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+.left-map-btn .gcs-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* =============================================================================
+   2 · FLEET ROSTER (fills the remaining rail height, scrolls internally)
+   ============================================================================= */
+.gcs-panel-body.left-fleet-body {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.left-fleet-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.left-meta-sep {
+  color: var(--gcs-text-4);
+}
+
+.left-meta-online {
+  color: var(--gcs-text-2);
+}
+
+.left-meta-avg,
+.left-meta-alerts {
+  color: var(--gcs-text-3);
+}
+
+.left-roster {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-bottom: 6px;
+}
+
+/* --- group heading (sticky while the roster scrolls) ---------------------- */
+.left-group {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 12px;
+  background-image: linear-gradient(
+    180deg,
+    rgba(4, 17, 25, 0.97) 0%,
+    rgba(4, 17, 25, 0.9) 66%,
+    rgba(4, 17, 25, 0.5) 100%
+  );
+}
+
+.left-group-name {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.left-group-en {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  color: var(--gcs-text-4);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.left-group-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: var(--gcs-line-faint);
+}
+
+.left-group-count {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- roster row: one 26px grid line per vessel ---------------------------- */
+.gcs-row.left-row {
+  display: grid;
+  grid-template-columns: 6px 38px minmax(0, 1fr) 32px 30px 24px 36px 5px;
+  column-gap: 4px;
+  align-items: center;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 8px 0 12px;
+  line-height: 1;
+}
+
+.left-row-dot {
+  justify-self: start;
+}
+
+.left-callsign {
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--gcs-fast) var(--gcs-ease);
+}
+
+.left-row:hover .left-callsign,
+.gcs-row.left-row.is-selected .left-callsign {
+  color: var(--gcs-accent-2);
+}
+
+.left-name {
+  overflow: hidden;
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-row:hover .left-name,
+.gcs-row.left-row.is-selected .left-name {
+  color: var(--gcs-text);
+}
+
+.left-type {
+  overflow: hidden;
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--gcs-text-4);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.left-row-bar {
+  width: 30px;
+  height: 3px;
+}
+
+.left-batt-pct {
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  letter-spacing: -0.01em;
+  color: var(--gcs-text-3);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.left-row.is-selected .left-batt-pct {
+  color: var(--gcs-text-2);
+}
+
+.left-spd {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.left-spd-val {
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--gcs-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.left-spd-unit {
+  font-family: var(--gcs-font-en);
+  font-size: 7.5px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-4);
+}
+
+.left-alarm-dot {
+  justify-self: end;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: transparent;
+  transition: background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.left-alarm-dot.is-on {
+  background-color: var(--gcs-warn);
+  box-shadow: 0 0 0 2px rgba(255, 178, 87, 0.14);
+}
+
+.left-alarm-dot.is-on.is-critical {
+  background-color: var(--gcs-danger);
+  box-shadow: 0 0 0 2px rgba(255, 93, 74, 0.16);
+  animation: gcs-dot-breathe var(--gcs-alarm-dur) ease-in-out infinite;
+}
+
+/* offline / stale rows stay in the roster but read as inactive */
+.left-row.is-offline .left-name,
+.left-row.is-offline .left-batt-pct,
+.left-row.is-offline .left-spd-val {
+  color: var(--gcs-text-4);
+}
+
+/* =============================================================================
+   3 · FORMATION CONTROL (~196px)
+   ============================================================================= */
+.gcs-panel-body.left-formation-body {
+  gap: 8px;
+  padding: 10px 12px 12px;
+  overflow: hidden;
+}
+
+/* --- 5 formation keys ------------------------------------------------------ */
+.left-form-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.gcs-btn.left-form-btn {
+  flex-direction: column;
+  gap: 2px;
+  height: 38px;
+  padding: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--gcs-text-3);
+}
+
+.gcs-btn.left-form-btn .gcs-icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.68;
+}
+
+.gcs-btn.left-form-btn:hover {
+  color: var(--gcs-text-2);
+}
+
+.gcs-btn.left-form-btn:hover .gcs-icon {
+  opacity: 0.9;
+}
+
+.gcs-btn.left-form-btn.is-active {
+  color: var(--gcs-accent);
+}
+
+.gcs-btn.left-form-btn.is-active .gcs-icon {
+  opacity: 1;
+}
+
+.left-form-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 15px;
+}
+
+.left-form-name {
+  font-family: var(--gcs-font-cn);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* --- speed presets --------------------------------------------------------- */
+.gcs-seg.left-speed {
+  width: 100%;
+}
+
+.gcs-seg.left-speed .gcs-seg-item {
+  flex: 1 1 0;
+  height: 24px;
+  gap: 4px;
+  padding: 0 6px;
+  font-size: 10.5px;
+}
+
+.left-seg-cn {
+  font-family: var(--gcs-font-cn);
+  letter-spacing: 0.02em;
+}
+
+.left-seg-en {
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-4);
+}
+
+.gcs-seg.left-speed .gcs-seg-item.is-active .left-seg-en {
+  color: rgba(95, 243, 228, 0.6);
+}
+
+.gcs-seg.left-speed .gcs-seg-item[disabled] {
+  opacity: 0.32;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* pending / acked feedback for the segmented control (base only styles .gcs-btn) */
+.gcs-seg.left-speed .gcs-seg-item.is-pending {
+  color: var(--gcs-text-4);
+  pointer-events: none;
+  cursor: progress;
+}
+
+.gcs-seg.left-speed .gcs-seg-item.is-acked {
+  animation: gcs-acked 400ms var(--gcs-ease) 1;
+}
+
+/* --- command rows ---------------------------------------------------------- */
+.left-cmd-row {
+  display: grid;
+  gap: 5px;
+}
+
+.left-cmd-row--aux {
+  grid-template-columns: 1.25fr 1fr 1fr;
+}
+
+.left-cmd-row--main {
+  grid-template-columns: 1fr 1fr 1.15fr;
+}
+
+.gcs-btn.left-btn {
+  height: 26px;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 10.5px;
+}
+
+.gcs-btn.left-btn .gcs-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.82;
+}
+
+.left-btn-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.left-btn-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.left-btn-cn {
+  font-family: var(--gcs-font-cn);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+
+.left-btn-en {
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-4);
+}
+
+.left-btn-en[hidden] {
+  display: none;
+}
+
+.gcs-btn.left-btn:hover .left-btn-en,
+.gcs-btn.left-btn.is-active .left-btn-en {
+  color: rgba(95, 243, 228, 0.62);
+}
+
+/* --- E-STOP: locked-down card + armed recover button ---------------------- */
+.gcs-panel.left-formation.is-estop {
+  border-color: rgba(255, 93, 74, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(255, 93, 74, 0.16),
+    var(--gcs-shadow-panel),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+}
+
+.gcs-panel.left-formation.is-estop .gcs-panel-head::after {
+  background-image: linear-gradient(90deg, var(--gcs-danger), rgba(255, 93, 74, 0));
+  opacity: 0.9;
+}
+
+.gcs-btn.left-estop .left-btn-en {
+  color: rgba(255, 93, 74, 0.66);
+}
+
+.gcs-btn.left-estop:hover .left-btn-en {
+  color: rgba(255, 93, 74, 0.9);
+}
+
+.gcs-btn.left-estop.is-armed {
+  background-color: rgba(255, 93, 74, 0.16);
+  border-color: var(--gcs-danger);
+  color: #ffdcd7;
+  box-shadow: inset 2px 0 0 var(--gcs-danger);
+}
+
+.gcs-btn.left-estop.is-armed .left-btn-en {
+  color: rgba(255, 220, 215, 0.72);
+}
+
+.gcs-btn.left-estop.is-armed:hover {
+  background-color: rgba(255, 93, 74, 0.24);
+  color: #fff;
+}
+
+/* --- header mode readout --------------------------------------------------- */
+.left-mode {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.left-mode-cn {
+  font-family: var(--gcs-font-cn);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.left-mode-en {
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+.left-mode[data-tone="ok"] .left-mode-cn {
+  color: var(--gcs-text-2);
+}
+
+.left-mode[data-tone="accent"] .left-mode-cn {
+  color: var(--gcs-accent);
+}
+
+.left-mode[data-tone="warn"] .left-mode-cn {
+  color: var(--gcs-warn);
+}
+
+.left-mode[data-tone="danger"] .left-mode-cn {
+  color: var(--gcs-danger);
+}
+
+.left-mode[data-tone="danger"] .left-mode-en {
+  color: rgba(255, 93, 74, 0.62);
+}
+
+/* =============================================================================
+   4 · RESPONSIVE (rail narrows to 272px / 252px via layout.css)
+   ============================================================================= */
+@media (max-width: 1500px) {
+  .gcs-row.left-row {
+    grid-template-columns: 6px 36px minmax(0, 1fr) 28px 22px 32px 5px;
+    padding: 0 6px 0 10px;
+  }
+
+  .left-type {
+    display: none;
+  }
+
+  .left-name {
+    font-size: 11px;
+  }
+
+  .left-mission-foot {
+    gap: 8px;
+  }
+
+  .left-mission-area-en {
+    display: none;
+  }
+
+  .left-mode-en {
+    display: none;
+  }
+
+  .left-form-grid {
+    gap: 4px;
+  }
+}

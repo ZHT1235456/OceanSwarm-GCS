@@ -1,0 +1,598 @@
+/* =============================================================================
+   OceanSwarm GCS — central HUD overlay
+   Owner: ui-map · visual spec: docs/GCS-design-system.md §7.3
+   -----------------------------------------------------------------------------
+   Scope: .hud-* only (plus body[data-gcs-view="map"] hiding 3D-only elements).
+   #gcs-hud is pointer-events:none; interactive groups opt back in with
+   .hud-interactive / button elements.
+   ============================================================================= */
+
+/* =============================================================================
+   0. Shell
+   ============================================================================= */
+.hud-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--gcs-font-cn);
+  color: var(--gcs-text);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hud-interactive,
+.hud-root button {
+  pointer-events: auto;
+}
+
+/* 3D-only instrumentation — hidden on the tactical chart layer (§7.3/§7.6) */
+body[data-gcs-view="map"] .hud-3d-only {
+  display: none !important;
+}
+
+/* =============================================================================
+   1. Top-left: view switch / camera presets / camera mode chip
+   ============================================================================= */
+.hud-topleft {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  max-width: min(430px, calc(100% - 28px));
+}
+
+/* view switch (reuses .gcs-seg / .gcs-seg-item from base.css) */
+.hud-viewseg {
+  height: 24px;
+  background-color: rgba(2, 12, 18, 0.62);
+  border-color: var(--gcs-line);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+
+.hud-viewseg .gcs-seg-item {
+  height: 22px;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+
+.hud-viewseg .gcs-seg-item .gcs-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.75;
+}
+
+.hud-viewseg .gcs-seg-item.is-active .gcs-icon {
+  opacity: 1;
+}
+
+/* camera preset chips */
+.hud-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+  max-width: 420px;
+}
+
+.hud-preset {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 19px;
+  padding: 0 7px;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.5);
+  color: var(--gcs-text-2);
+  font-family: var(--gcs-font-cn);
+  font-size: 9.5px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.hud-preset:hover {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-line-strong);
+  background-color: rgba(95, 243, 228, 0.1);
+}
+
+.hud-preset.is-active {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-accent-line);
+  background-color: rgba(95, 243, 228, 0.13);
+  box-shadow: inset 0 -1px 0 rgba(95, 243, 228, 0.55);
+}
+
+.hud-preset:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+/* camera mode chip */
+.hud-camrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.hud-camchip {
+  height: 20px;
+  gap: 5px;
+  padding: 0 7px;
+  cursor: pointer;
+  background-color: rgba(2, 12, 18, 0.52);
+  font-family: var(--gcs-font-cn);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--gcs-text-2);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.hud-camchip:hover {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-accent-line);
+}
+
+.hud-camchip .hud-camdot {
+  width: 5px;
+  height: 5px;
+}
+
+.hud-camcyc {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.45;
+}
+
+.hud-camchip .hud-camcyc .gcs-icon {
+  width: 10px;
+  height: 10px;
+}
+
+/* =============================================================================
+   2. Top-centre compass tape
+   ============================================================================= */
+.hud-compass {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+}
+
+.hud-compass-tape {
+  position: relative;
+  width: 380px;
+  height: 36px;
+  overflow: hidden;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background:
+    linear-gradient(180deg, rgba(2, 12, 18, 0.68), rgba(2, 12, 18, 0.3)),
+    rgba(2, 12, 18, 0.2);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+
+/* fade the tape ends so ticks do not collide with the plate border */
+.hud-compass-tape::before,
+.hud-compass-tape::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 26px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.hud-compass-tape::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(2, 12, 18, 0.92), rgba(2, 12, 18, 0));
+}
+
+.hud-compass-tape::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(2, 12, 18, 0.92), rgba(2, 12, 18, 0));
+}
+
+.hud-compass-canvas {
+  display: block;
+  width: 100%;
+  height: 36px;
+}
+
+/* =============================================================================
+   3. Top-right renderer readout
+   ============================================================================= */
+.hud-stats {
+  position: absolute;
+  top: 15px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+}
+
+.hud-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.hud-stat-k {
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--gcs-text-4);
+}
+
+.hud-stat-v {
+  color: var(--gcs-text-2);
+  font-family: var(--gcs-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-stat-sep {
+  color: var(--gcs-text-4);
+  opacity: 0.7;
+}
+
+/* =============================================================================
+   4. Glass plates (bottom-left coordinates/scale, bottom-right environment)
+   ============================================================================= */
+.hud-plate {
+  position: relative;
+  padding: 7px 10px 8px;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.56);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+}
+
+/* drafting corner brackets, same language as .gcs-panel */
+.hud-plate::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 8px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 1px 8px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 8px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 1px 8px no-repeat;
+  opacity: 0.7;
+}
+
+.hud-bottom-left {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 5;
+}
+
+.hud-bottom-left .hud-plate {
+  min-width: 202px;
+}
+
+.hud-bottom-right {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+}
+
+.hud-bottom-right .hud-plate {
+  min-width: 214px;
+}
+
+/* --- coordinate + motion readouts ---------------------------------------- */
+.hud-coord {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--gcs-font-mono);
+  font-size: 10.5px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hud-coord-v {
+  color: var(--gcs-text);
+}
+
+.hud-coord-sep {
+  display: none;
+}
+
+.hud-motion {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.hud-motion-k {
+  font-family: var(--gcs-font-cn);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.hud-motion-v {
+  font-family: var(--gcs-font-mono);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.hud-motion-u {
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-3);
+}
+
+.hud-motion-sep {
+  padding: 0 2px;
+  color: var(--gcs-text-4);
+}
+
+/* --- dynamic scale bar ---------------------------------------------------- */
+.hud-scale {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  margin-top: 7px;
+  transition: opacity var(--gcs-fast) var(--gcs-ease);
+}
+
+.hud-scale--hidden {
+  display: none;
+}
+
+.hud-scale-bar {
+  position: relative;
+  width: 100px;
+  height: 6px;
+  border-left: 1px solid var(--gcs-accent-line);
+  border-right: 1px solid var(--gcs-accent-line);
+  border-bottom: 1px solid rgba(159, 214, 232, 0.7);
+  transition: width var(--gcs-fast) var(--gcs-ease);
+}
+
+.hud-scale-bar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1px;
+  height: 3px;
+  background: rgba(159, 214, 232, 0.55);
+}
+
+.hud-scale-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(95, 243, 228, 0.28), rgba(95, 243, 228, 0.06));
+}
+
+.hud-scale-label {
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+  padding-bottom: 0;
+}
+
+/* --- environment plate ---------------------------------------------------- */
+.hud-env-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 5px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--gcs-line-faint);
+}
+
+.hud-env-title {
+  font-family: var(--gcs-font-cn);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-2);
+}
+
+.hud-env-en {
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gcs-text-4);
+}
+
+.hud-seachip {
+  margin-left: auto;
+  height: 16px;
+  padding: 0 5px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  border-color: rgba(159, 214, 232, 0.3);
+  color: var(--gcs-accent-2);
+}
+
+.hud-env-body {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.hud-wind-arrow {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  color: var(--gcs-accent-2);
+  opacity: 0.9;
+  transition: transform var(--gcs-slow) var(--gcs-ease);
+  will-change: transform;
+}
+
+.hud-env-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hud-env-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.hud-env-line--sub {
+  font-size: 9.5px;
+  color: var(--gcs-text-3);
+}
+
+.hud-env-k {
+  display: inline-flex;
+  align-items: center;
+  color: var(--gcs-accent-2);
+  opacity: 0.7;
+}
+
+.hud-env-k .gcs-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.hud-env-v {
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-env-line--sub .hud-env-v {
+  font-size: 9.5px;
+  color: var(--gcs-text-2);
+}
+
+/* =============================================================================
+   5. Selection lock-frame canvas
+   ============================================================================= */
+.hud-lock-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   6. Responsive adjustments
+   ============================================================================= */
+@media (max-width: 1500px) {
+  .hud-compass-tape {
+    width: 320px;
+  }
+
+  .hud-topleft {
+    max-width: min(390px, calc(100% - 28px));
+  }
+
+  .hud-presets {
+    max-width: 380px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .hud-compass-tape {
+    width: 280px;
+  }
+
+  .hud-bottom-left .hud-plate {
+    min-width: 186px;
+  }
+
+  .hud-bottom-right .hud-plate {
+    min-width: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-wind-arrow,
+  .hud-scale-bar {
+    transition: none;
+  }
+}
