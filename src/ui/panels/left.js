@@ -389,6 +389,7 @@ export function createLeftPanel(ctx) {
       setText(r.spdVal, DASH);
       setAlarm(prev, r.alarm, 0, null);
       setClass(r.row, 'is-offline', false);
+      setRowTone(prev, r.row, '');
       return;
     }
 
@@ -408,7 +409,16 @@ export function createLeftPanel(ctx) {
     const alarmCount = isNum(v.alarmCount) ? Math.max(0, Math.round(v.alarmCount)) : 0;
     setAlarm(prev, r.alarm, alarmCount, v.status);
 
+    // whole-row severity marking (base classes: 2px left bar + faint tint)
+    setRowTone(prev, r.row, v.status === 'critical' ? 'danger' : v.status === 'warning' ? 'warn' : '');
     setClass(r.row, 'is-offline', v.status === 'offline');
+  }
+
+  function setRowTone(prev, el, tone) {
+    if (prev.rowTone === tone) return;
+    prev.rowTone = tone;
+    setClass(el, 'gcs-row--warn', tone === 'warn');
+    setClass(el, 'gcs-row--danger', tone === 'danger');
   }
 
   function setFill(prev, el, battery) {

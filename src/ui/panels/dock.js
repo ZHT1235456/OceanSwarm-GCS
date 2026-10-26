@@ -170,6 +170,39 @@ export function createDockPanel(ctx) {
     return CATEGORY_EN[ev.category] || DASH;
   }
 
+  /** Source chip: short label + a micro tint by source class (design §7.4). */
+  function sourceChip(ev) {
+    const vessel = ev.sourceId && meta.FLEET_BY_ID ? meta.FLEET_BY_ID.get(ev.sourceId) : null;
+    let tone = 'is-system';
+    let label = ev.sourceLabel || '系统';
+    let colorVar = 'var(--gcs-text-3)';
+    if (vessel) {
+      tone = 'is-vessel';
+      label = vessel.callSign || vessel.name || label;
+      colorVar = `var(--gcs-type-${vessel.type})`;
+    } else {
+      const text = String(ev.sourceLabel || '');
+      if (text.includes('指挥')) {
+        tone = 'is-cmd';
+        colorVar = 'var(--gcs-command)';
+      } else if (text.includes('链路') || text.includes('数据')) {
+        tone = 'is-link';
+        colorVar = 'var(--gcs-accent-2)';
+      } else if (text.includes('任务')) {
+        tone = 'is-mission';
+        colorVar = 'var(--gcs-gold)';
+      }
+      label = text || '系统';
+    }
+    const chip = h('span', {
+      class: `gcs-chip dock-ev-source ${tone}`,
+      text: label,
+      attrs: { title: ev.sourceLabel || label },
+    });
+    chip.style.setProperty('--dock-src', colorVar);
+    return chip;
+  }
+
   function createRow(ev) {
     const severity = Object.prototype.hasOwnProperty.call(SEVERITY_ORDER, ev.severity) ? ev.severity : 'info';
     const row = h('div', {
@@ -194,7 +227,7 @@ export function createDockPanel(ctx) {
     row.append(
       h('span', { class: 'dock-ev-time', text: ev.clockText || DASH }),
       h('i', { class: 'dock-ev-bar', attrs: { 'aria-hidden': 'true' } }),
-      h('span', { class: 'dock-ev-source', text: ev.sourceLabel || DASH }),
+      sourceChip(ev),
       h('span', { class: 'dock-ev-text', text: ev.text || '' }),
       h('span', { class: 'dock-ev-meta', text: eventMeta(ev) }),
     );
@@ -334,7 +367,7 @@ export function createDockPanel(ctx) {
         spellcheck: 'false',
         autocomplete: 'off',
         autocapitalize: 'off',
-        placeholder: '输入指令，如 formation wedge / 编队 楔形 / help',
+        placeholder: '输入指令 · 编队 楔形 / formation wedge',
         'aria-label': '指令输入',
       },
     });

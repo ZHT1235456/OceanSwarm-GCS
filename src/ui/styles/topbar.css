@@ -195,7 +195,7 @@
 
 .topbar-live-text {
   font-family: var(--gcs-font-en);
-  font-size: 8.5px;
+  font-size: 9.5px;
   line-height: 1;
   letter-spacing: 0.16em;
   color: var(--gcs-text-3);
@@ -207,7 +207,7 @@
 
 .topbar-label {
   font-family: var(--gcs-font-cn);
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.12em;
@@ -448,7 +448,7 @@
   align-items: baseline;
   gap: 5px;
   font-family: var(--gcs-font-cn);
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.1em;
@@ -460,7 +460,7 @@
 .topbar-stat-k em {
   font-style: normal;
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1;
   letter-spacing: 0.14em;
   color: var(--gcs-text-4);
@@ -471,7 +471,7 @@
   align-items: baseline;
   gap: 4px;
   font-family: var(--gcs-font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1;
   letter-spacing: 0.01em;
   color: var(--gcs-text);
@@ -560,7 +560,7 @@
 
 .topbar-alarm-label {
   font-family: var(--gcs-font-cn);
-  font-size: 8.5px;
+  font-size: 9.5px;
   line-height: 1;
   letter-spacing: 0.12em;
   color: var(--gcs-text-4);
@@ -626,7 +626,7 @@
 
 .topbar-clock-sub {
   font-family: var(--gcs-font-mono);
-  font-size: 9px;
+  font-size: 9.5px;
   line-height: 1;
   letter-spacing: 0.05em;
   color: var(--gcs-text-3);
@@ -673,7 +673,7 @@
   align-items: baseline;
   gap: 5px;
   font-family: var(--gcs-font-cn);
-  font-size: 9px;
+  font-size: 9.5px;
   line-height: 1;
   letter-spacing: 0.08em;
   color: var(--gcs-text-3);
@@ -683,7 +683,7 @@
 .topbar-operator-k em {
   font-style: normal;
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1;
   letter-spacing: 0.14em;
   color: var(--gcs-text-4);
@@ -691,7 +691,7 @@
 
 .topbar-operator-v {
   font-family: var(--gcs-font-mono);
-  font-size: 9px;
+  font-size: 9.5px;
   line-height: 1;
   letter-spacing: 0.05em;
   color: var(--gcs-text-4);

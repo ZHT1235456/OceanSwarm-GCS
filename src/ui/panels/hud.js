@@ -513,7 +513,7 @@ export function createHudPanel(ctx) {
       c.stroke();
       if (isMajor) {
         const label = norm === 0 ? 'N' : norm === 90 ? 'E' : norm === 180 ? 'S' : norm === 270 ? 'W' : String(norm).padStart(3, '0');
-        c.font = `500 8.5px ${tokens.fontMono}`;
+        c.font = `500 9px ${tokens.fontMono}`;
         c.fillStyle = norm % 90 === 0 ? withAlpha(tokens.accent, 0.85) : withAlpha(tokens.text3, 0.95);
         c.fillText(label, x, baseY - len - 3.5);
       }

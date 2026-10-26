@@ -27,6 +27,13 @@ body {
   overscroll-behavior: none;
 }
 
+/* The HTML `hidden` attribute must always win over component display rules —
+   several panels keep an empty/connecting state mounted next to the live
+   content and toggle visibility with `.hidden`. */
+[hidden] {
+  display: none !important;
+}
+
 #app {
   position: fixed;
   inset: 0;

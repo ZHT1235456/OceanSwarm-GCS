@@ -440,3 +440,50 @@ runConsole(text)                 // 由 dock 模块解析后调用底层 dispatc
    会因 DOM/three 依赖失败，改为最小逻辑抽离自测 + 浏览器 smoke），浏览器零报错、截图目检通过。
 5. 完成后给 Lead 发消息：文件清单、实现要点、已知限制、自测截图路径。
 6. 不 commit、不 push、不 npm install、不修改 `package.json`（如确需依赖先问 Lead）。
+
+---
+
+## 11. 实现状态与验收记录（v2.0.0）
+
+**交付状态：已完成。** 全部模块按本契约实现，整机回归与仿真自测均通过。
+
+### 11.1 代码规模（新增/改造）
+
+| 区域 | 规模 |
+|---|---|
+| `src/ui/`（界面：9 个核心模块 + 7 个面板 + 10 个 CSS 主题文件） | ≈ 17 000 行 |
+| `src/sim/`（仿真引擎 8 个模块） | ≈ 3 600 行 |
+| `src/gcs/`（领域常量 + 场景桥） | ≈ 570 行 |
+| `src/systems/swarm-control.js` + `camera-director.js` + `objects/effects/selection.js` | ≈ 760 行 |
+| 扩展 `src/systems/formation.js` / `src/main.js` / `index.html` | 增量改造 |
+
+### 11.2 自动化验收（最近一次全部通过）
+
+| 项目 | 命令 | 结果 |
+|---|---|---|
+| 仿真引擎单元自测 | `node artifacts/sim/selftest.mjs` | **29/29 PASS**：全字段 schema、15 类指令 + 9 种拒绝路径、告警触发/升级/恢复、暂停态回执、确定性复现 |
+| 仿真引擎浏览器集成 | `node artifacts/sim/browser-check.mjs` | **15/15 PASS**，0 console error |
+| 整机回归 | `npm run qa:gcs`（`artifacts/gcs/capture.mjs`） | **25/25 PASS**，0 console error / pageerror，0 外部网络请求 |
+| 生产构建 | `npm run build` | 通过，产物离线可用 |
+
+整机回归断言覆盖：7 个面板挂载、DOM 无 NaN/undefined、17 艇遥测有限值、名册点击 ↔ 3D ↔
+右栏联动、战术图切换、航点派遣与回执、编队指令回执、急停弹层、帮助弹层、指令台执行、
+纯净视景、开机门闩、3D 拾取、键盘快捷键、急停长按确认、急停中指令拒绝与恢复。
+
+### 11.3 视觉基线
+
+`docs/figures/gcs-01-console.png`（三维态势总览）、`gcs-02-map.png`（二维战术图）、
+`gcs-03-estop.png`（急停长按确认）、`gcs-04-boot.png`（开机自检）、
+`gcs-05-formation.png`（编队保持 + 单艇自主）、`gcs-06-clean.png`（纯净视景）。
+截图由 `artifacts/gcs/run-final/` 全量冷启动回归产出；开机图由
+`artifacts/gcs/bootshot.mjs`（`?bootms=` 慢放 + 暂停渲染）单独拍摄。
+
+### 11.4 已知限制
+
+1. 仿真任务阶段按 `MISSION.phases` 无限循环、MET 持续累计；跨午夜时日期文本正确滚动。
+2. `depthM` 为近似水深场（继承场景无测深通道）；阵位偏离告警依赖 `vessels[].stationErrorM`。
+3. 极端低帧率（软件渲染 ~2 fps）下，数据链回执的墙钟观测会顺延到下一 UI 帧（仿真时间语义仍严格）。
+4. 1× 巡航时 17 艇在中心视区的屏幕尺寸偏小（真实尺度 10–30 m 艇在 ~600 m 观察距离下）；
+   可通过视角预设「低空 / 编队 / 俯视」或滚轮拉近观察。
+5. 战术图在 2.2× 以上缩放时编队簇内 17 个呼号标签会略拥挤（阅读阈值建议 ≤ 2.2×）。
+

@@ -214,25 +214,43 @@
   opacity: 0.9;
 }
 
-.dock-ev-source {
+/* source chip — micro tint by source class (§7.4: [来源 chip]) */
+.dock-ev-source.gcs-chip {
+  --dock-src: var(--gcs-text-3);
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
-  min-width: 46px;
-  max-width: 84px;
-  height: 14px;
+  min-width: 44px;
+  max-width: 76px;
+  height: 15px;
   padding: 0 4px;
   overflow: hidden;
-  border: 1px solid var(--gcs-line-faint);
+  border-color: color-mix(in srgb, var(--dock-src) 34%, transparent);
   border-radius: 2px;
-  background: rgba(2, 11, 18, 0.2);
+  background: color-mix(in srgb, var(--dock-src) 8%, transparent);
   font-family: var(--gcs-font-mono);
-  font-size: 8.5px;
+  font-size: 9px;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: 0.03em;
-  color: var(--gcs-text-3);
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--dock-src) 78%, var(--gcs-text) 22%);
+  text-transform: none;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.dock-ev-source.is-vessel {
+  border-style: solid;
+}
+
+.dock-ev-source.is-cmd {
+  border-style: solid;
+}
+
+.dock-ev-source.is-system {
+  color: var(--gcs-text-3);
+  border-color: var(--gcs-line-faint);
+  background: rgba(2, 11, 18, 0.2);
 }
 
 .dock-ev-text {

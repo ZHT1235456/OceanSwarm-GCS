@@ -425,8 +425,8 @@
    ============================================================================= */
 .ovl-dialog {
   position: relative;
-  width: 420px;
-  max-width: min(92vw, 460px);
+  width: 460px;
+  max-width: min(92vw, 500px);
   border: 1px solid var(--gcs-line-strong);
   border-radius: var(--gcs-radius);
   background-color: var(--gcs-panel-strong);
@@ -528,7 +528,7 @@
 .ovl-dialog-title {
   margin: 6px 0 0;
   font-family: var(--gcs-font-cn);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: 0.02em;
@@ -626,6 +626,23 @@
   padding: 0 14px;
   overflow: hidden;
   font-size: 11.5px;
+}
+
+/* The single dangerous call-to-action must read as *the* primary action of the
+   whole console: filled danger tint + solid danger edge, not just an outline. */
+.ovl-dialog--danger .ovl-dialog-confirm {
+  background-color: rgba(255, 93, 74, 0.16);
+  border-color: rgba(255, 93, 74, 0.9);
+  color: #ffd9d2;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 93, 74, 0.16),
+    0 0 14px rgba(255, 93, 74, 0.12);
+}
+
+.ovl-dialog--danger .ovl-dialog-confirm:hover {
+  background-color: rgba(255, 93, 74, 0.26);
+  border-color: var(--gcs-danger);
+  color: #fff0ec;
 }
 
 .ovl-dialog-confirm::before {
@@ -793,10 +810,86 @@
 }
 
 .ovl-help-body {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   padding: 8px 20px 16px;
+}
+
+/* --- lower band: console / map / e-stop quick reference -------------------- */
+.ovl-help-extra {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 20px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--gcs-line-faint);
+}
+
+.ovl-help-group {
+  min-width: 0;
+}
+
+.ovl-help-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 7px;
+  font-family: var(--gcs-font-cn);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.ovl-help-group-title em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gcs-text-4);
+}
+
+.ovl-help-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ovl-help-group-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--gcs-text-3);
+}
+
+.ovl-help-code {
+  flex: 0 0 auto;
+  padding: 1px 4px;
+  border: 1px solid var(--gcs-line-faint);
+  border-radius: 2px;
+  background: rgba(2, 11, 18, 0.35);
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: var(--gcs-accent-2);
+  white-space: nowrap;
+}
+
+.ovl-help-dot {
+  color: var(--gcs-text-4);
 }
 
 .ovl-help-grid {

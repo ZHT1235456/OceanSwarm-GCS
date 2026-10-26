@@ -442,8 +442,17 @@ export function createDetailPanel(ctx) {
       if (!r) continue;
       const isOn = !!sensor.on;
       if (isOn) online += 1;
-      setText(r.stateEl, sensor.stateText || (isOn ? '开启' : '关闭'));
-      r.stateEl.className = isOn ? 'gcs-chip gcs-chip--ok detail-sensor-state' : 'gcs-chip detail-sensor-state';
+      // §7.5 polish: the capsule switch alone carries the nominal on/off state.
+      // The state chip only appears when the payload is off or degraded, so the
+      // row never shows two redundant "working" indicators.
+      const stateText = sensor.stateText || (isOn ? '工作' : '待机');
+      const abnormal = /故障|告警|异常|错误|离线|失效|过热/.test(stateText);
+      const chipText = abnormal ? stateText : isOn ? stateText : '关闭';
+      r.stateEl.hidden = isOn && !abnormal;
+      setText(r.stateEl, chipText);
+      r.stateEl.className = abnormal
+        ? 'gcs-chip gcs-chip--warn detail-sensor-state'
+        : 'gcs-chip detail-sensor-state';
       setAttr(r.switchEl, 'aria-checked', isOn ? 'true' : 'false');
       setClass(r.switchEl, 'is-on', isOn);
       const label = sensor.label || meta.SENSOR_CATALOG[sensor.id]?.label || sensor.id;

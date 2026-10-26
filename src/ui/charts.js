@@ -76,6 +76,13 @@ export function fitCanvas(canvas, cssW, cssH) {
   w = Math.max(1, Math.round(isNum(w) ? w : 1));
   h = Math.max(1, Math.round(isNum(h) ? h : 1));
 
+  // Hidden / not-laid-out canvases (clean view, collapsed sections, display:none
+  // panels) measure 0–1 px; drawing into those can produce negative radii and
+  // throw IndexSizeError from ctx.arc(). Degrade to a no-op instead.
+  if (w < 4 || h < 4) {
+    return { ctx: null, w: 0, h: 0, dpr };
+  }
+
   const bw = Math.max(1, Math.round(w * dpr));
   const bh = Math.max(1, Math.round(h * dpr));
   if (canvas.width !== bw) canvas.width = bw;
@@ -142,9 +149,16 @@ export function drawHorizon(canvas, opts = {}) {
 
   // --- sky (fixed gradient, a touch lighter towards the horizon) ------------
   const sky = ctx.createLinearGradient(0, 0, 0, cy);
-  sky.addColorStop(0, 'rgba(20, 64, 80, 0.92)');
+  sky.addColorStop(0, 'rgba(30, 96, 116, 0.95)');
   sky.addColorStop(1, cssVar('--gcs-ink-900', '#06202c'));
   ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+
+  // faint instrument glass wash so the instrument never reads as a dead box
+  const wash = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+  wash.addColorStop(0, 'rgba(95, 243, 228, 0.09)');
+  wash.addColorStop(1, 'rgba(95, 243, 228, 0)');
+  ctx.fillStyle = wash;
   ctx.fillRect(0, 0, w, h);
 
   // --- rotated horizon / sea ------------------------------------------------
@@ -161,7 +175,7 @@ export function drawHorizon(canvas, opts = {}) {
 
   // pitch ladder — only bars that stay clear of the frame get labels
   ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(159, 214, 232, 0.38)';
+  ctx.strokeStyle = 'rgba(159, 214, 232, 0.5)';
   ctx.fillStyle = text3;
   ctx.font = monoFont(6);
   ctx.textBaseline = 'middle';
@@ -184,10 +198,10 @@ export function drawHorizon(canvas, opts = {}) {
 
   // horizon line — cyan with a restrained glow
   ctx.strokeStyle = accent;
-  ctx.globalAlpha = 0.95;
-  ctx.lineWidth = 1.2;
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5;
   ctx.shadowColor = accent;
-  ctx.shadowBlur = 5;
+  ctx.shadowBlur = 6;
   ctx.beginPath();
   ctx.moveTo(-big, Math.round(horizonY) + 0.5);
   ctx.lineTo(big, Math.round(horizonY) + 0.5);
@@ -210,7 +224,7 @@ export function drawHorizon(canvas, opts = {}) {
   const arcR = Math.min(w, h) * 0.45;
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.strokeStyle = 'rgba(159, 214, 232, 0.42)';
+  ctx.strokeStyle = 'rgba(159, 214, 232, 0.55)';
   ctx.fillStyle = text3;
   ctx.lineWidth = 1;
   ctx.font = enFont(5.5, 500);
@@ -301,8 +315,8 @@ export function drawRingGauge(canvas, opts = {}) {
 
   const cx = w / 2;
   const cy = h / 2;
-  const outer = Math.min(w, h) / 2 - 0.75;
-  const r = outer - 3.5;
+  const outer = Math.max(4, Math.min(w, h) / 2 - 0.75);
+  const r = Math.max(2, outer - 3.5);
 
   // tick ring — 36 ticks, every 30° slightly longer
   ctx.save();
@@ -508,9 +522,10 @@ export function drawAreaLine(canvas, opts = {}) {
   const lastV = valid.length ? valid[valid.length - 1].v : null;
 
   // a single sample has no line yet: show a faint reference rule at its value
+  // plus an explicit "sampling" hint so the empty plot never reads as broken.
   if (lastV != null && valid.length < 2) {
     ctx.strokeStyle = color;
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.28;
     ctx.lineWidth = 1;
     ctx.setLineDash([1.5, 3]);
     const ry = Math.round(yFor(lastV)) + 0.5;
@@ -519,6 +534,14 @@ export function drawAreaLine(canvas, opts = {}) {
     ctx.lineTo(w - padR, ry);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = text3;
+    ctx.font = monoFont(7);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.85;
+    ctx.fillText('采样中 · SAMPLING', padL + plotW / 2, padT + plotH * 0.62);
     ctx.globalAlpha = 1;
   }
 

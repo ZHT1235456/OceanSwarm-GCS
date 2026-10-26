@@ -184,7 +184,7 @@ const _v = new THREE.Vector3();
 // GCS framing: the swarm has to read well inside the centre viewport of the
 // operator console — a slightly raised rear-quarter vantage that keeps the
 // golden-hour horizon in frame while the formation fills the observation window.
-const CONSOLE_VIEW = { back: 660, up: 210, right: 205, targetAhead: 80, targetHeight: 10 };
+const CONSOLE_VIEW = { back: 600, up: 190, right: 190, targetAhead: 80, targetHeight: 10 };
 function setCameraFromFleet() {
   const fwd = fleet.forward;
   const right = fleet.right;

@@ -262,9 +262,9 @@ body[data-gcs-view="map"] .hud-3d-only {
 
 .hud-stat-k {
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   color: var(--gcs-text-4);
 }
 
@@ -381,7 +381,7 @@ body[data-gcs-view="map"] .hud-3d-only {
 
 .hud-motion-u {
   font-family: var(--gcs-font-en);
-  font-size: 8.5px;
+  font-size: 9px;
   letter-spacing: 0.06em;
   color: var(--gcs-text-3);
 }
@@ -449,30 +449,32 @@ body[data-gcs-view="map"] .hud-3d-only {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-bottom: 5px;
-  margin-bottom: 6px;
+  padding-bottom: 4px;
+  margin-bottom: 5px;
   border-bottom: 1px solid var(--gcs-line-faint);
 }
 
 .hud-env-title {
   font-family: var(--gcs-font-cn);
   font-size: 9.5px;
+  line-height: 1.2;
   letter-spacing: 0.1em;
   color: var(--gcs-text-2);
 }
 
 .hud-env-en {
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
+  line-height: 1.2;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gcs-text-4);
 }
 
 .hud-seachip {
   margin-left: auto;
-  height: 16px;
+  height: 15px;
   padding: 0 5px;
   font-size: 9px;
   letter-spacing: 0.08em;
@@ -480,10 +482,12 @@ body[data-gcs-view="map"] .hud-3d-only {
   color: var(--gcs-accent-2);
 }
 
+/* explicit 26 px track: the two readout lines always fit (no scroll overflow) */
 .hud-env-body {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
+  height: 26px;
 }
 
 .hud-wind-arrow {
@@ -491,18 +495,25 @@ body[data-gcs-view="map"] .hud-3d-only {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 27px;
-  height: 27px;
+  width: 24px;
+  height: 24px;
   color: var(--gcs-accent-2);
   opacity: 0.9;
   transition: transform var(--gcs-slow) var(--gcs-ease);
   will-change: transform;
 }
 
+.hud-wind-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
 .hud-env-lines {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  justify-content: center;
+  gap: 1px;
+  height: 26px;
   min-width: 0;
 }
 
@@ -510,14 +521,17 @@ body[data-gcs-view="map"] .hud-3d-only {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
-  line-height: 1.25;
+  height: 12px;
+  font-size: 9.5px;
+  line-height: 12px;
   color: var(--gcs-text-2);
   white-space: nowrap;
 }
 
 .hud-env-line--sub {
-  font-size: 9.5px;
+  height: 11px;
+  font-size: 9px;
+  line-height: 11px;
   color: var(--gcs-text-3);
 }
 
@@ -529,20 +543,22 @@ body[data-gcs-view="map"] .hud-3d-only {
 }
 
 .hud-env-k .gcs-icon {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 
 .hud-env-v {
   font-family: var(--gcs-font-mono);
-  font-size: 10px;
+  font-size: 9.5px;
+  line-height: 12px;
   letter-spacing: 0.02em;
   color: var(--gcs-text);
   font-variant-numeric: tabular-nums;
 }
 
 .hud-env-line--sub .hud-env-v {
-  font-size: 9.5px;
+  font-size: 9px;
+  line-height: 11px;
   color: var(--gcs-text-2);
 }
 

@@ -70,6 +70,7 @@ npm run preview    # 预览构建产物，http://127.0.0.1:5180
 |---|---|
 | ![三维态势](docs/figures/gcs-01-console.png) | ![二维战术图](docs/figures/gcs-02-map.png) |
 | ![急停确认](docs/figures/gcs-03-estop.png) | ![开机自检](docs/figures/gcs-04-boot.png) |
+| ![编队与单艇自主](docs/figures/gcs-05-formation.png) | ![纯净视景](docs/figures/gcs-06-clean.png) |
 
 ## 架构
 
@@ -93,13 +94,17 @@ npm run preview    # 预览构建产物，http://127.0.0.1:5180
 
 ## 质量验证
 
-- `npm run qa:gcs`：Headless Chromium（SwiftShader）整机回归——开机、三维态势、选中联动、
-  战术图、航点派遣、编队切换、急停长按确认、指令拒绝/恢复、帮助、纯净视景、键盘快捷键、
-  3D 拾取，共 30+ 断言，并输出 `artifacts/gcs/run/shots/*.png` 与 `report.json`。
-- `npm run qa:gcs:quick`：快速子集。
-- 断言覆盖：零 console error / pageerror、仅本机请求、关键 DOM 无 NaN、17 艇遥测有限值、
-  指令回执流转、面板无挂载错误。
-- 视觉与交互的基线截图见 `docs/figures/gcs-*.png`。
+- **整机回归**：`npm run qa:gcs`（Headless Chromium / SwiftShader）最近一次 **25/25 断言通过**、
+  **零 console error / pageerror**、**零外部网络请求**；覆盖：面板挂载、17 艇遥测有限值、
+  名册点击联动、战术图切换、航点派遣与回执、编队指令回执、急停弹层、帮助弹层、
+  指令台执行、纯净视景、开机门闩、3D 拾取、键盘快捷键、急停长按确认、急停下指令拒绝与恢复。
+  截图与报告：`artifacts/gcs/run-final/`（gitignore）。
+- **仿真引擎**：`node artifacts/sim/selftest.mjs` → **29/29 PASS**（全字段 schema、15 类指令与
+  9 种拒绝路径、告警触发/升级/恢复、暂停态回执、确定性复现）；`node artifacts/sim/browser-check.mjs`
+  → **15/15 PASS**（真实页面集成）。
+- **构建**：`npm run build` 通过，产物仍完全离线（无 CDN / 无远程字体）。
+- **视觉审查**：design owner 以 2× 截图逐区审查并通过（面板玻璃、标题行、角标、滚动条、密度、
+  对齐、亮天空可读性）；最终视觉基线见 `docs/figures/gcs-*.png`。
 
 ## 目录结构
 

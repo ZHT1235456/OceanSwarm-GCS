@@ -325,8 +325,8 @@
 .left-group-en {
   flex: 0 0 auto;
   font-family: var(--gcs-font-en);
-  font-size: 8.5px;
-  letter-spacing: 0.14em;
+  font-size: 9px;
+  letter-spacing: 0.12em;
   color: var(--gcs-text-4);
   text-transform: uppercase;
   white-space: nowrap;
@@ -341,7 +341,7 @@
 .left-group-count {
   flex: 0 0 auto;
   font-family: var(--gcs-font-mono);
-  font-size: 8.5px;
+  font-size: 9px;
   letter-spacing: 0.02em;
   color: var(--gcs-text-4);
   font-variant-numeric: tabular-nums;
@@ -350,7 +350,7 @@
 /* --- roster row: one 26px grid line per vessel ---------------------------- */
 .gcs-row.left-row {
   display: grid;
-  grid-template-columns: 6px 38px minmax(0, 1fr) 37px 30px 24px 36px 5px;
+  grid-template-columns: 6px 38px minmax(0, 1fr) 37px 30px 26px 38px 5px;
   column-gap: 4px;
   align-items: center;
   height: 26px;
@@ -395,8 +395,8 @@
 .left-type {
   overflow: hidden;
   font-family: var(--gcs-font-en);
-  font-size: 8px;
-  letter-spacing: 0.04em;
+  font-size: 9px;
+  letter-spacing: 0.02em;
   color: var(--gcs-text-4);
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -409,6 +409,7 @@
 }
 
 .left-batt-pct {
+  padding-right: 4px;
   font-family: var(--gcs-font-mono);
   font-size: 9.5px;
   letter-spacing: -0.01em;
@@ -426,7 +427,7 @@
   display: inline-flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 2px;
+  gap: 3px;
   white-space: nowrap;
 }
 
@@ -440,9 +441,9 @@
 
 .left-spd-unit {
   font-family: var(--gcs-font-en);
-  font-size: 7.5px;
+  font-size: 9px;
   font-style: normal;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--gcs-text-4);
 }
 
@@ -555,8 +556,8 @@
 
 .left-seg-en {
   font-family: var(--gcs-font-en);
-  font-size: 8px;
-  letter-spacing: 0.1em;
+  font-size: 9px;
+  letter-spacing: 0.08em;
   color: var(--gcs-text-4);
 }
 
@@ -597,7 +598,7 @@
 
 .gcs-btn.left-btn {
   height: 26px;
-  padding: 0 6px;
+  padding: 0 5px;
   gap: 4px;
   font-size: 10.5px;
 }
@@ -630,9 +631,9 @@
 
 .left-btn-en {
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
   font-style: normal;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--gcs-text-4);
 }
 
@@ -702,9 +703,9 @@
 
 .left-mode-en {
   font-family: var(--gcs-font-en);
-  font-size: 8.5px;
+  font-size: 9px;
   font-style: normal;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: var(--gcs-text-4);
   white-space: nowrap;
 }

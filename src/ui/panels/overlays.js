@@ -24,7 +24,21 @@
 import { h, setText, setClass } from '../dom.js';
 import '../styles/overlays.css';
 
-const BOOT_MS = 2400;
+// Boot duration: 2.4 s by default. QA may pass ?bootms=6000 to slow the intro
+// down so the opening animation can be captured at full quality.
+const BOOT_MS_DEFAULT = 2400;
+const BOOT_MS_MIN = 800;
+const BOOT_MS_MAX = 30000;
+function readBootMs() {
+  try {
+    const v = Number(new URLSearchParams(window.location.search).get('bootms'));
+    if (Number.isFinite(v) && v >= BOOT_MS_MIN && v <= BOOT_MS_MAX) return v;
+  } catch {
+    /* ignore malformed URLs */
+  }
+  return BOOT_MS_DEFAULT;
+}
+const BOOT_MS = readBootMs();
 const BOOT_EXIT_MS = 460;
 const BOOT_LOGS = [
   { at: 0.34, text: '初始化三维视景…' },
@@ -475,7 +489,51 @@ export function createOverlaysPanel(ctx) {
       grid.appendChild(h('div', { class: 'ovl-help-item' }, keys, h('span', { class: 'ovl-help-label', text: row.label || '' })));
     }
 
-    const body = h('div', { class: 'ovl-help-body' }, grid);
+    function group(title, en, lines) {
+      return h(
+        'section',
+        { class: 'ovl-help-group' },
+        h('h3', { class: 'ovl-help-group-title' }, title, h('em', { text: en })),
+        h(
+          'ul',
+          { class: 'ovl-help-group-list' },
+          lines.map((line) =>
+            h(
+              'li',
+              { class: 'ovl-help-group-line' },
+              line.code ? h('code', { class: 'ovl-help-code', text: line.code }) : null,
+              line.code ? h('span', { class: 'ovl-help-dot', text: '·' }) : null,
+              h('span', { text: line.text }),
+            ),
+          ),
+        ),
+      );
+    }
+
+    const extras = h(
+      'div',
+      { class: 'ovl-help-extra' },
+      group('指令台', 'COMMAND CONSOLE', [
+        { code: 'formation wedge', text: '英文指令：编队楔形' },
+        { code: '编队 楔形', text: '中文别名同样可用' },
+        { code: 'goto 900 -200', text: '单艇定点导航（东/北，米）' },
+        { code: '↑ ↓ · Tab · help', text: '历史 / 补全 / 帮助' },
+      ]),
+      group('地图', 'TACTICAL MAP', [
+        { text: '滚轮缩放 · 拖拽平移 · 双击居中' },
+        { text: '点击艇标选中，联动名册与详情' },
+        { text: '「航点」工具点击海图派遣单艇' },
+        { text: '图层 chip 控制航迹 / 航线 / 网格 / 边界' },
+      ]),
+      group('急停流程', 'E-STOP', [
+        { text: '长按确认按钮 1.2 秒触发紧急停止' },
+        { text: '集群航迹冻结，仅「解除急停」可恢复' },
+        { text: 'Esc 或点击背板取消本次确认' },
+        { text: '事件流完整记录下发、回执与恢复' },
+      ]),
+    );
+
+    const body = h('div', { class: 'ovl-help-body' }, grid, extras);
     const foot = h(
       'footer',
       { class: 'ovl-help-foot' },
@@ -703,10 +761,10 @@ export function createOverlaysPanel(ctx) {
       if (ctx.state.skipIntro || reducedMotion()) {
         startBoot();
       } else {
-        // Wait for the first live snapshot: the pre-JS splash covers the scene
-        // build, then the boot sequence plays over the ready console. This also
-        // lets QA capture the animation mid-flight (?nointro skipped it).
-        bootStartTimer = setTimeout(startBoot, 12000);
+        // Start on the first live snapshot so the pre-JS splash covers the scene
+        // build and the animation plays over a ready console. The 1.5 s guard
+        // keeps the boot gate inside index.js' 5.2 s fallback deadline.
+        bootStartTimer = setTimeout(startBoot, 1500);
       }
     },
 
