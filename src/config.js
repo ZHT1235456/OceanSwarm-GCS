@@ -173,6 +173,14 @@ export const FORMATION = {
   pitchResponse: 0.85,
 };
 
+// Environmental water current used by the vessel dynamics plant (world frame).
+// It matches the sea-state telemetry (0.45 kn towards 210°) and forces the
+// controllers to crab / correct drift like a real USV.
+export const CURRENT = {
+  speedKn: 0.45,
+  dirDeg: 210, // compass direction the current flows towards
+};
+
 // -----------------------------------------------------------------------------
 // Fleet roster. offsets are in the formation frame:
 //   [ lateral (+ = starboard/right), forward (+ = ahead) ] in meters.

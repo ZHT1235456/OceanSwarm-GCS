@@ -372,7 +372,8 @@ export function createAlarmEngine({ clock, domain, onEvent, onChange } = {}) {
       // ---- 阵位偏离（需持续 ≥3 s，避免换队形瞬间误报） ----------------------
       const stationId = makeId('station', vid);
       const source = vessel.stationSource || 'none';
-      const canJudge = source !== 'none' && !vessel.offline && vessel.sceneMode === 'formation';
+      const manoeuvring = fleet.formationTransition === true || fleet.manoeuvring === true;
+      const canJudge = source !== 'none' && !vessel.offline && vessel.sceneMode === 'formation' && !manoeuvring;
       if (canJudge) {
         const fallback = source !== 'scene';
         const prevLevel = levelOf(active.get(stationId)?.severity);

@@ -1,15 +1,19 @@
 {
   "name": "ocean-swarm-gcs",
   "private": true,
-  "version": "2.0.0",
-  "description": "OceanSwarm GCS — 无人艇集群地面指挥控制上位机（继承 OceanSwarm 三维海域视景）",
+  "version": "2.1.0",
+  "description": "OceanSwarm GCS — 无人艇集群地面指挥控制上位机（继承 OceanSwarm 三维海域视景 / 3-DOF 水动力动力学）",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5179",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 5180",
     "qa:gcs": "node artifacts/gcs/capture.mjs --out artifacts/gcs/run",
-    "qa:gcs:quick": "node artifacts/gcs/capture.mjs --quick --out artifacts/gcs/quick"
+    "qa:gcs:quick": "node artifacts/gcs/capture.mjs --quick --out artifacts/gcs/quick",
+    "qa:dynamics": "node artifacts/dynamics/selftest.mjs",
+    "qa:motion": "node artifacts/motion/closed-loop-test.mjs",
+    "qa:fleet": "node artifacts/motion/fleet-integration-test.mjs",
+    "qa:sim": "node artifacts/sim/selftest.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

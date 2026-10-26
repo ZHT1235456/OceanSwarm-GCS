@@ -29,22 +29,22 @@ const rad = (d) => (d * Math.PI) / 180;
 
 // --- commanded formation slots (lat = starboard, fwd = ahead, meters) --------
 const DIAMOND_RING = [
-  { lat: 0, fwd: -86 },
-  { lat: 86, fwd: 0 },
-  { lat: 0, fwd: 86 },
-  { lat: -86, fwd: 0 },
-  { lat: 0, fwd: -172 },
-  { lat: 172, fwd: 0 },
-  { lat: 0, fwd: 172 },
-  { lat: -172, fwd: 0 },
-  { lat: 86, fwd: 86 },
-  { lat: 86, fwd: -86 },
-  { lat: -86, fwd: 86 },
-  { lat: -86, fwd: -86 },
-  { lat: 0, fwd: -258 },
-  { lat: 258, fwd: 0 },
-  { lat: 0, fwd: 258 },
-  { lat: -258, fwd: 0 },
+  { lat: 0, fwd: -74 },
+  { lat: 74, fwd: 0 },
+  { lat: 0, fwd: 74 },
+  { lat: -74, fwd: 0 },
+  { lat: 0, fwd: -148 },
+  { lat: 148, fwd: 0 },
+  { lat: 0, fwd: 148 },
+  { lat: -148, fwd: 0 },
+  { lat: 74, fwd: 74 },
+  { lat: 74, fwd: -74 },
+  { lat: -74, fwd: 74 },
+  { lat: -74, fwd: -74 },
+  { lat: 0, fwd: -222 },
+  { lat: 222, fwd: 0 },
+  { lat: 0, fwd: 222 },
+  { lat: -222, fwd: 0 },
 ];
 
 const FORMATION_LAYOUT = {
@@ -52,17 +52,17 @@ const FORMATION_LAYOUT = {
   wedge(k) {
     const rank = Math.floor(k / 2) + 1;
     const side = k % 2 === 0 ? -1 : 1;
-    return { lat: side * rank * 56, fwd: -rank * 52 };
+    return { lat: side * rank * 52, fwd: -rank * 46 };
   },
   // single file astern, slight lateral stagger for a natural wake lane
   column(k) {
-    return { lat: (k % 2 === 0 ? -1 : 1) * 11, fwd: -(k + 1) * 54 };
+    return { lat: (k % 2 === 0 ? -1 : 1) * 10, fwd: -(k + 1) * 46 };
   },
   // line abreast, flagship in the middle of a symmetric short line
   line(k) {
     const rank = Math.floor(k / 2) + 1;
     const side = k % 2 === 0 ? -1 : 1;
-    return { lat: side * rank * 56, fwd: 0 };
+    return { lat: side * rank * 46, fwd: 0 };
   },
   // concentric diamond lattice around the flagship
   diamond(k) {
@@ -71,7 +71,7 @@ const FORMATION_LAYOUT = {
   // close ring escort around the flagship
   ring(k) {
     const a = (k / 16) * TWO_PI;
-    return { lat: Math.cos(a) * 168, fwd: Math.sin(a) * 168 };
+    return { lat: Math.cos(a) * 150, fwd: Math.sin(a) * 150 };
   },
 };
 
@@ -95,28 +95,67 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
     slots: new Map(), // id -> {lat, fwd} tweened
     slotTargets: new Map(), // id -> {lat, fwd}
     autoKinds: new Map(), // id -> 'goto' | 'rtl'
+    formationTransitionUntil: 0, // envTime until which the formation is reshaping
+    formationSettling: false, // true until all hulls have regained station
     lastCommand: null,
     history: [],
   };
 
+  const TRANSITION_SECONDS = 22;
+  const TRANSITION_MAX_SECONDS = 900;
+
   // --- slots -----------------------------------------------------------------
-  function layoutFor(key, scale = 1) {
-    const layout = new Map();
-    layout.set(flags.id, { lat: 0, fwd: 0 });
+  /** Target slot geometry for the escorts (flagship always keeps (0,0)). */
+  function layoutTargets(key, scale = 1) {
     const fn = FORMATION_LAYOUT[key] || FORMATION_LAYOUT.wedge;
-    escorts.forEach((b, i) => {
+    return escorts.map((_, i) => {
       const { lat, fwd } = fn(i);
-      layout.set(b.id, { lat: lat * scale, fwd: fwd * scale });
+      return { lat: lat * scale, fwd: fwd * scale };
     });
-    return layout;
   }
 
+  /** Current hull position expressed in the formation frame. */
+  function framePos(b) {
+    const dx = b._rt.pos.x - fleet.pathPos.x;
+    const dz = b._rt.pos.z - fleet.pathPos.z;
+    return {
+      lat: dx * fleet.right.x + dz * fleet.right.z,
+      fwd: dx * fleet.forward.x + dz * fleet.forward.z,
+    };
+  }
+
+  /**
+   * Assign the new slot geometry to escorts by nearest-station matching. A real
+   * swarm re-shapes around where the hulls actually are; without this, a wedge
+   * -> column change would order some slow support vessels hundreds of metres
+   * astern (they would have to let the whole formation pass them).
+   */
   function retargetSlots() {
-    state.slotTargets = layoutFor(state.formationKey, state.slotScale);
+    const pool = layoutTargets(state.formationKey, state.slotScale).map((t) => ({ ...t, taken: false }));
+    const remaining = escorts.map((b) => ({ b, pos: framePos(b) }));
+    const out = new Map();
+    out.set(flags.id, { lat: 0, fwd: 0 });
+    while (remaining.length) {
+      let best = null;
+      for (const slot of pool) {
+        if (slot.taken) continue;
+        for (const cand of remaining) {
+          const d = Math.hypot(cand.pos.lat - slot.lat, cand.pos.fwd - slot.fwd);
+          if (!best || d < best.d) best = { slot, cand, d };
+        }
+      }
+      best.slot.taken = true;
+      remaining.splice(remaining.indexOf(best.cand), 1);
+      out.set(best.cand.b.id, { lat: best.slot.lat, fwd: best.slot.fwd });
+    }
+    state.slotTargets = out;
   }
 
   // Boot directly in the commanded wedge (the console opens in formation).
-  state.slotTargets = layoutFor('wedge', 1);
+  state.slotTargets = new Map();
+  state.slotTargets.set(flags.id, { lat: 0, fwd: 0 });
+  const bootTargets = layoutTargets('wedge', 1);
+  escorts.forEach((b, i) => state.slotTargets.set(b.id, { ...bootTargets[i] }));
   for (const b of roster) {
     const t = state.slotTargets.get(b.id) || { lat: 0, fwd: 0 };
     state.slots.set(b.id, { lat: t.lat, fwd: t.fwd });
@@ -153,6 +192,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         if (!f) return refuse(`未知编队队形：${cmd.formation}`);
         state.formationKey = f.key;
         retargetSlots();
+        state.formationTransitionUntil = fleet.envTime + TRANSITION_SECONDS;
+        state.formationSettling = true;
         return { ok: true, text: `编队队形 → ${f.name}`, detail: { formation: f.key } };
       }
 
@@ -161,6 +202,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         if (!Number.isFinite(scale) || scale < 0.2 || scale > 3) return refuse('编队尺度超出允许范围');
         state.slotScale = scale;
         retargetSlots();
+        state.formationTransitionUntil = fleet.envTime + TRANSITION_SECONDS;
+        state.formationSettling = true;
         return {
           ok: true,
           text: scale < 1 ? '编队集结（收缩阵位）' : '编队分散（扩展阵位）',
@@ -215,7 +258,7 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         state.uturn = null;
         state.rtl = { arrived: false };
         state.timeTarget = 1;
-        state.speedTarget = 1.7;
+        state.speedTarget = 1.25;
         return { ok: true, text: '集群返航基地（试验基地码头）' };
       }
 
@@ -240,6 +283,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         for (const b of roster) {
           b._auto = null;
           b._holdPos = true;
+          b._holdPoint = { x: b._rt.pos.x, z: b._rt.pos.z };
+          b._holdYaw = b._rt.yaw;
         }
         state.autoKinds.clear();
         return { ok: true, text: '紧急停止：全部无人艇立即停船' };
@@ -251,7 +296,11 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         state.mode = 'cruise';
         state.timeTarget = 1;
         state.speedTarget = 1;
-        for (const b of roster) b._holdPos = false;
+        for (const b of roster) {
+          b._holdPos = false;
+          b._holdPoint = null;
+          b._holdYaw = null;
+        }
         fleet.turnRate = FORMATION.turnRate;
         return { ok: true, text: '解除急停，恢复编队队形与巡航' };
       }
@@ -263,7 +312,9 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         const z = Number(cmd.z);
         if (!Number.isFinite(x) || !Number.isFinite(z)) return refuse('航点坐标非法');
         b._holdPos = false;
-        b._auto = { target: new THREE.Vector3(x, 0, z), speed: 6.6, arrive: 8, kind: 'goto' };
+        b._holdPoint = null;
+        b._holdYaw = null;
+        b._auto = { target: new THREE.Vector3(x, 0, z), speed: 6.6, arrive: 10, kind: 'goto' };
         setBoatMode(b.id, 'goto');
         const vm = vmeta(b.id);
         return {
@@ -277,10 +328,12 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         const b = byId.get(cmd.id);
         if (!b) return refuse(`未知无人艇：${cmd.id}`);
         b._holdPos = false;
+        b._holdPoint = null;
+        b._holdYaw = null;
         b._auto = {
           target: new THREE.Vector3(meta.HOME_BASE.x, 0, meta.HOME_BASE.z),
           speed: 6.8,
-          arrive: 12,
+          arrive: 14,
           kind: 'rtl',
         };
         setBoatMode(b.id, 'rtl');
@@ -293,6 +346,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         if (!b) return refuse(`未知无人艇：${cmd.id}`);
         clearAuto(b);
         b._holdPos = true;
+        b._holdPoint = { x: b._rt.pos.x, z: b._rt.pos.z };
+        b._holdYaw = b._rt.yaw;
         const vm = vmeta(b.id);
         return { ok: true, text: `单艇保持待机 → ${vm ? vm.callSign : b.id}` };
       }
@@ -302,6 +357,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         if (!b) return refuse(`未知无人艇：${cmd.id}`);
         clearAuto(b);
         b._holdPos = false;
+        b._holdPoint = null;
+        b._holdYaw = null;
         const vm = vmeta(b.id);
         return { ok: true, text: `单艇归队 → ${vm ? vm.callSign : b.id}` };
       }
@@ -328,6 +385,9 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
   function update(dt) {
     dt = Math.min(Math.max(dt, 0), 0.08);
 
+    // the plant controller must always know the propulsion-cut state
+    fleet.estopActive = state.estop;
+
     // smooth commanded speed / time scale
     const k = 1 - Math.exp(-dt / 0.9);
     state.speedCur += (state.speedTarget - state.speedCur) * k;
@@ -336,8 +396,9 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
     fleet.speedScale = state.speedCur;
     fleet.timeScale = state.timeCur;
 
-    // tween formation slots
-    const slotK = 1 - Math.exp(-dt / 2.6);
+    // tween formation slots (slow enough that the hydrodynamic hulls can chase
+    // their new stations without absurd accelerations)
+    const slotK = 1 - Math.exp(-dt / 5.5);
     for (const b of roster) {
       const target = state.slotTargets.get(b.id) || { lat: 0, fwd: 0 };
       let cur = state.slots.get(b.id);
@@ -350,10 +411,26 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
       b.slot = cur;
     }
 
+    // formation reshape bookkeeping: keep the "manoeuvring" flag up until every
+    // hull has regained its station (slow support hulls can take minutes)
+    if (state.formationSettling) {
+      let maxErr = 0;
+      for (const b of roster) {
+        if (b._auto || b._holdPos || state.estop) continue;
+        maxErr = Math.max(maxErr, stationError(b));
+      }
+      state.formationMaxError = maxErr;
+      const minTimeDone = fleet.envTime >= state.formationTransitionUntil;
+      const forcedDone = fleet.envTime >= state.formationTransitionUntil - TRANSITION_SECONDS + TRANSITION_MAX_SECONDS;
+      if (forcedDone || (minTimeDone && maxErr < 28)) state.formationSettling = false;
+    } else {
+      state.formationMaxError = 0;
+    }
+
     // U-turn: hold a constant turn rate until 180 degrees of course change
     if (state.mode === 'uturn' && state.uturn) {
-      fleet.turnRate = state.uturn.dir * 0.05;
-      state.uturn.acc += 0.05 * dt * Math.max(state.timeCur, 0.05);
+      fleet.turnRate = state.uturn.dir * 0.03;
+      state.uturn.acc += 0.03 * dt * Math.max(state.timeCur, 0.05);
       if (state.uturn.acc >= Math.PI - 0.02) {
         fleet.turnRate = FORMATION.turnRate;
         state.uturn = null;
@@ -377,7 +454,7 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         const desiredHeadingRad = Math.atan2(dx, -dz); // compass bearing -> radians
         const desiredYaw = Math.PI / 2 - desiredHeadingRad;
         const err = wrap(desiredYaw - fleet.pathYaw);
-        fleet.turnRate = clamp(err * 0.55, -0.05, 0.05);
+        fleet.turnRate = clamp(err * 0.28, -0.015, 0.015);
         state.rtl.bearingDeg = ((Math.atan2(dx, -dz) * 180) / Math.PI + 360) % 360;
       }
     }
@@ -387,15 +464,16 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
       if (!b._auto) continue;
       const target = b._auto.target;
       const dist = Math.hypot(target.x - b._rt.pos.x, target.z - b._rt.pos.z);
-      const arrive = b._auto.arrive || 8;
-      if (dist <= arrive) {
+      const speed = b._rt.sogMS || 0;
+      // the autopilot hands over to station keeping inside 18 m; accept the
+      // station once the hull is close and has actually slowed down
+      if (dist <= 16 && speed < 2.2) {
         const kind = b._auto.kind;
         clearAuto(b);
         b._holdPos = true;
-        if (kind === 'goto' || kind === 'rtl') {
-          // arrive on station: keep the hull where it is until recalled
-          b._holdPos = true;
-        }
+        b._holdPoint = { x: b._rt.pos.x, z: b._rt.pos.z };
+        b._holdYaw = b._rt.yaw;
+        state.autoKinds.set(b.id, kind === 'rtl' ? 'arrived-rtl' : 'arrived-goto');
       }
     }
   }
@@ -424,10 +502,21 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         x: b._rt.pos.x,
         z: b._rt.pos.z,
         yawRad: b._rt.yaw,
-        headingDeg: ((90 - THREE.MathUtils.radToDeg(b._rt.yaw)) % 360 + 360) % 360,
+        headingDeg: b._rt.headingDeg != null
+          ? b._rt.headingDeg
+          : ((90 - THREE.MathUtils.radToDeg(b._rt.yaw)) % 360 + 360) % 360,
+        cogDeg: b._rt.cogDeg != null ? b._rt.cogDeg : null,
+        driftDeg: b._rt.driftDeg != null ? b._rt.driftDeg : 0,
         pitchRad: b._rt.pitch,
         rollRad: b._rt.roll,
         heaveM: b._rt.heave,
+        // --- manoeuvring telemetry (3-DOF plant truth) ---
+        uMS: b._rt.u || 0,
+        swayMS: b._rt.v || 0,
+        sogMS: b._rt.sogMS || 0,
+        yawRateDegS: b._rt.yawRateDegS || 0,
+        rudderDeg: b._rt.rudderDeg || 0,
+        throttlePct: b._rt.throttlePct || 0,
         mode,
         stationErrorM: stationError(b),
         waypoint: auto ? { x: auto.target.x, z: auto.target.z, kind: auto.kind } : b.waypoint || null,
@@ -435,6 +524,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
     });
 
     const f = meta.FORMATION_BY_KEY.get(state.formationKey);
+    const transition = !!state.formationSettling;
+    const manoeuvring = transition || state.mode === 'uturn' || state.mode === 'rtl';
     return {
       simTime: fleet.time,
       fleet: {
@@ -448,6 +539,8 @@ export function createSwarmControl({ fleet, boats, meta = META }) {
         formationKey: state.formationKey,
         formationText: f ? f.name : state.formationKey,
         formationEn: f ? f.en : '',
+        formationTransition: transition,
+        manoeuvring,
         rtlDistanceM: state.rtl ? state.rtl.distanceM ?? null : null,
         rtlBearingDeg: state.rtl ? state.rtl.bearingDeg ?? null : null,
         estopActive: state.estop,

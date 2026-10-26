@@ -92,6 +92,12 @@ function yawFromHeading(headingDeg) {
   return normalizeDeg(90 - headingDeg) * DEG;
 }
 
+/** Normalise an angle difference to (-180, 180]. */
+function normalizeSignedDeg(deg) {
+  const value = normalizeDeg(deg);
+  return value > 180 ? value - 360 : value;
+}
+
 function waterDepthAt(x, z) {
   let depth = 44 + 9 * Math.sin(x / 640 + 1.7) + 6 * Math.sin(z / 480 + 0.4) + 3 * Math.sin((x + z) / 310);
   for (const s of SHOALS) {
@@ -177,15 +183,31 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       prevX: position.x,
       prevZ: position.z,
       yawRad: Number.isFinite(sceneVessel?.yawRad) ? sceneVessel.yawRad : initialFleetYaw,
+      prevYawRad: Number.isFinite(sceneVessel?.yawRad) ? sceneVessel.yawRad : initialFleetYaw,
       headingDeg: Number.isFinite(sceneVessel?.headingDeg)
         ? normalizeDeg(sceneVessel.headingDeg)
         : headingFromYaw(Number.isFinite(sceneVessel?.yawRad) ? sceneVessel.yawRad : initialFleetYaw),
       cogDeg: 0,
+      driftDeg: 0,
       pitchDeg: safeNumber(sceneVessel?.pitchRad, 0) / DEG,
       rollDeg: safeNumber(sceneVessel?.rollRad, 0) / DEG,
       heaveM: safeNumber(sceneVessel?.heaveM, 0),
       sogKn: 0,
       sogFactor: clamp((SOG_FACTOR[spec.type] ?? 1) + telemetryRng.range(-0.025, 0.025), 0.8, 1.2),
+      // --- 3-DOF manoeuvring telemetry (task-8, scene truth pass-through) -----
+      // sceneSogMS is NaN when the scene does not provide real dynamics, in
+      // which case the legacy fleet-speed × class-factor estimate is used.
+      sceneSogMS: NaN,
+      uMS: 0,
+      swayMS: 0,
+      sceneCogDeg: NaN,
+      sceneDriftDeg: NaN,
+      hasSceneCog: false,
+      yawRateDegS: 0,
+      rudderDeg: 0,
+      throttlePct: 0,
+      hasSceneDynamics: false,
+      speedNoisePhase: telemetryRng.phase(),
       sceneMode: normalizeSceneMode(sceneVessel?.mode),
       waypoint: normalizeWaypoint(sceneVessel?.waypoint),
       batteryPct,
@@ -241,6 +263,10 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       formationText: typeof initialFleet.formationText === 'string' ? initialFleet.formationText : '',
       rtlDistanceM: null,
     },
+    // commanded / scene-reported fleet speed used by the legacy fallback only;
+    // the public fleet.speedKn becomes the mean ground speed of all 17 boats.
+    sceneFleetSpeed: Number.isFinite(initialFleet.speedKn) ? Math.max(0, initialFleet.speedKn) : 6,
+    dynamicsActive: false,
     sea: {
       state: 3,
       waveHeightM: 0.8,
@@ -278,15 +304,27 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
   // --- initial telemetry ----------------------------------------------------
   applyFleetState(initialFleet, 0);
   for (const vessel of vessels) {
+    if (initial) applyVesselSceneState(vessel, initial, 0);
     vessel.depthM = round1(waterDepthAt(vessel.x, vessel.z));
-    vessel.sogKn = round1(model.fleet.speedKn * vessel.sogFactor);
-    vessel.cogDeg = vessel.headingDeg;
+    if (vessel.hasSceneDynamics) {
+      vessel.sogKn = round1(clamp(vessel.sceneSogMS * KNOTS_PER_MS, 0, 40));
+      if (vessel.hasSceneCog) vessel.cogDeg = vessel.sceneCogDeg;
+      const driftRad = (vessel.driftDeg * Math.PI) / 180;
+      if (!Number.isFinite(vessel.uMS)) vessel.uMS = vessel.sceneSogMS * Math.cos(driftRad);
+      if (!Number.isFinite(vessel.swayMS)) vessel.swayMS = vessel.sceneSogMS * Math.sin(driftRad);
+    } else {
+      vessel.sogKn = round1(model.sceneFleetSpeed * vessel.sogFactor);
+      vessel.cogDeg = vessel.headingDeg;
+      vessel.uMS = vessel.sogKn / KNOTS_PER_MS;
+      vessel.swayMS = 0;
+    }
     updateLink(vessel, 0);
     // Converge the power / thermal filters to the cruise operating point so the
     // opening snapshot already reads like a settled console (not a cold start).
     updatePower(vessel, 20, telemetryRng);
     vessel.drainPctPerMin = Math.max(0.02, (DRAIN_RATE[vessel.spec.type] || 0.003) * batteryLoadFactor(vessel) * 60);
   }
+  model.dynamicsActive = vessels.some((v) => v.hasSceneDynamics);
   recomputeStationErrors();
   updateSea(0);
   updateMission(clock.metOffset);
@@ -347,6 +385,8 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     if (estopActive && !model.estopActive) model.estopSinceT = model.t;
     if (!estopActive) model.estopSinceT = null;
     model.estopActive = estopActive;
+    model.formationTransition = f.formationTransition === true;
+    model.manoeuvring = f.manoeuvring === true || model.formationTransition;
 
     const centerX = Number.isFinite(f.centerX) ? f.centerX : model.fleet.centerX;
     const centerZ = Number.isFinite(f.centerZ) ? f.centerZ : model.fleet.centerZ;
@@ -365,18 +405,24 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
         : model.fleet.yawRad;
 
     // Speed: the scene reports knots; fall back to measured centre velocity.
+    // This is the COMMANDED/scene-level speed. The public snapshot fleet.speedKn
+    // is the mean ground speed of the 17 hulls (computed by the snapshot builder
+    // from the real per-vessel telemetry), so real acceleration shows up there.
     let speedKn = Number.isFinite(f.speedKn) ? Math.max(0, f.speedKn) : NaN;
     if (!Number.isFinite(speedKn) && dt > 0) {
       const dx = centerX - model.fleet.centerX;
       const dz = centerZ - model.fleet.centerZ;
       speedKn = (Math.hypot(dx, dz) / dt) * KNOTS_PER_MS;
     }
-    if (!Number.isFinite(speedKn)) speedKn = model.fleet.speedKn;
+    if (!Number.isFinite(speedKn)) speedKn = model.sceneFleetSpeed;
+    model.sceneFleetSpeed = clamp(speedKn, 0, 40);
     const speedScale = Number.isFinite(f.speedScale) ? f.speedScale : model.fleet.speedScale;
 
-    // Cruise speed reference (1x) — 6.0 kn by contract; adapt slowly.
+    // Cruise speed reference (1x) — 6.0 kn by contract. With a real 3-DOF scene
+    // the mean speed varies during acceleration, so only adapt very slowly on
+    // the legacy fallback path.
     let speedKnMax = model.fleet.speedKnMax;
-    if (speedScale > 0.15 && speedKn > 2) {
+    if (!model.dynamicsActive && speedScale > 0.15 && speedKn > 2) {
       const estimate = speedKn / speedScale;
       if (estimate > 3.5 && estimate < 9) {
         speedKnMax = speedKnMax + (estimate - speedKnMax) * 0.05;
@@ -420,8 +466,10 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     model.missingFrames = 0;
     vessel.prevX = vessel.x;
     vessel.prevZ = vessel.z;
+    vessel.prevYawRad = vessel.yawRad;
     if (Number.isFinite(sceneVessel.x)) vessel.x = sceneVessel.x;
     if (Number.isFinite(sceneVessel.z)) vessel.z = sceneVessel.z;
+    const yawBefore = vessel.yawRad;
     if (Number.isFinite(sceneVessel.yawRad)) vessel.yawRad = sceneVessel.yawRad;
     if (Number.isFinite(sceneVessel.headingDeg)) {
       vessel.headingDeg = normalizeDeg(sceneVessel.headingDeg);
@@ -438,7 +486,36 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       vessel.stationSource = 'scene';
     }
 
-    if (dt > 0) {
+    // --- 3-DOF hydrodynamics telemetry (task-8 scene truth) ------------------
+    // sogMS is the primary truth; the older `speedKn` field is accepted as a
+    // fallback so a scene without the dynamics patch still reports real speed.
+    const sogMS = Number.isFinite(sceneVessel.sogMS)
+      ? Math.max(0, sceneVessel.sogMS)
+      : Number.isFinite(sceneVessel.speedKn)
+        ? Math.max(0, sceneVessel.speedKn) / KNOTS_PER_MS
+        : NaN;
+    vessel.sceneSogMS = sogMS;
+    vessel.hasSceneDynamics = Number.isFinite(sogMS);
+    vessel.uMS = Number.isFinite(sceneVessel.uMS) ? clamp(sceneVessel.uMS, -40, 40) : NaN;
+    vessel.swayMS = Number.isFinite(sceneVessel.swayMS) ? clamp(sceneVessel.swayMS, -20, 20) : NaN;
+    vessel.hasSceneCog = Number.isFinite(sceneVessel.cogDeg);
+    if (vessel.hasSceneCog) vessel.sceneCogDeg = normalizeDeg(sceneVessel.cogDeg);
+    vessel.sceneDriftDeg = Number.isFinite(sceneVessel.driftDeg) ? normalizeSignedDeg(sceneVessel.driftDeg) : NaN;
+    if (Number.isFinite(sceneVessel.yawRateDegS)) {
+      vessel.yawRateDegS = clamp(sceneVessel.yawRateDegS, -180, 180);
+    } else if (dt > 0) {
+      vessel.yawRateDegS = clamp(normalizeSignedDeg((vessel.yawRad - yawBefore) / DEG) / dt, -180, 180);
+    } else {
+      vessel.yawRateDegS = 0;
+    }
+    if (Number.isFinite(sceneVessel.rudderDeg)) vessel.rudderDeg = clamp(sceneVessel.rudderDeg, -30, 30);
+    if (Number.isFinite(sceneVessel.throttlePct)) vessel.throttlePct = clamp(sceneVessel.throttlePct, 0, 100);
+
+    // Course over ground: prefer the scene COG (真实区分艏向/航迹向), fall back
+    // to the measured position deltas for legacy scenes.
+    if (vessel.hasSceneCog) {
+      vessel.cogDeg = vessel.sceneCogDeg;
+    } else if (dt > 0) {
       const distance = Math.hypot(vessel.x - vessel.prevX, vessel.z - vessel.prevZ);
       if (distance > 0.03) {
         const cogTarget = normalizeDeg(Math.atan2(vessel.x - vessel.prevX, -(vessel.z - vessel.prevZ)) / DEG);
@@ -449,20 +526,39 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     } else {
       vessel.cogDeg = vessel.headingDeg;
     }
+    vessel.driftDeg = Number.isFinite(vessel.sceneDriftDeg)
+      ? vessel.sceneDriftDeg
+      : normalizeSignedDeg(vessel.cogDeg - vessel.headingDeg);
   }
 
   /**
-   * Speed over ground: the scene's commanded fleet speed (already includes the
-   * speed preset) times a small per-class factor, plus a smooth seeded wobble.
-   * Autonomous / hold / RTB boats follow their own planning speeds.
+   * Speed over ground.
+   *
+   * task-8: whenever the scene provides the 3-DOF truth (`sogMS`) the number is
+   * passed through verbatim (only ≤0.03 kn of deterministic read-out noise).
+   * Autonomous / hold / RTB speeds therefore come from the real hydrodynamic
+   * model too. Legacy scenes without the new fields keep the old estimate:
+   * commanded fleet speed × per-class factor + smooth wobble.
    */
   function updateSog(vessel, dt) {
-    const ph = vessel.noisePhases.sog;
+    const ph = vessel.speedNoisePhase;
+    if (vessel.hasSceneDynamics) {
+      const trueMS = Math.max(0, vessel.sceneSogMS);
+      const trueKn = trueMS * KNOTS_PER_MS;
+      const noise = Math.sin(model.t * 1.13 + ph) * 0.018 + Math.sin(model.t * 0.47 + ph * 2.1) * 0.007;
+      vessel.sogKn = clamp(trueKn + clamp(noise, -0.028, 0.028), 0, 40);
+      const driftRad = (Number.isFinite(vessel.driftDeg) ? vessel.driftDeg : 0) * DEG;
+      if (!Number.isFinite(vessel.uMS)) vessel.uMS = trueMS * Math.cos(driftRad);
+      if (!Number.isFinite(vessel.swayMS)) vessel.swayMS = trueMS * Math.sin(driftRad);
+      return;
+    }
+
     const smooth =
       Math.sin(model.t * 0.37 + ph) * 0.12 +
       Math.sin(model.t * 0.11 + ph * 1.7) * 0.08 +
       Math.sin(model.t * 0.83 + ph * 2.3) * 0.04;
-    const fleetStop = model.estopActive || model.fleet.mode === 'hold' || model.fleet.mode === 'estop' || model.fleet.speedKn < 0.3;
+    const commandedKn = model.sceneFleetSpeed;
+    const fleetStop = model.estopActive || model.fleet.mode === 'hold' || model.fleet.mode === 'estop' || commandedKn < 0.3;
     let target;
     if (vessel.offline) {
       target = 0;
@@ -475,11 +571,15 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     } else if (fleetStop) {
       target = SOG_HOLD_KN + Math.abs(smooth) * 0.2;
     } else {
-      target = model.fleet.speedKn * vessel.sogFactor + smooth;
+      target = commandedKn * vessel.sogFactor + smooth;
     }
     const k = 1 - Math.exp(-dt / 1.1);
     vessel.sogKn = clamp(vessel.sogKn + (clamp(target, 0, 30) - vessel.sogKn) * k, 0, 30);
     if (vessel.sogKn < 0.04) vessel.sogKn = 0;
+    const speedMS = vessel.sogKn / KNOTS_PER_MS;
+    const driftRad = (Number.isFinite(vessel.driftDeg) ? vessel.driftDeg : 0) * DEG;
+    vessel.uMS = speedMS * Math.cos(driftRad);
+    vessel.swayMS = speedMS * Math.sin(driftRad);
   }
 
   function recomputeStationErrors() {
@@ -708,6 +808,16 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       vessel.depthM = round1(waterDepthAt(vessel.x, vessel.z) + Math.sin(model.t / 41 + vessel.noisePhases.depth) * 0.35);
     }
     applyOverridesAndSensors();
+    // Public fleet speed = mean ground speed of all 17 hulls (task-8): real
+    // acceleration / deceleration from the hydrodynamic model shows up here.
+    let sogSum = 0;
+    let dynamicsCount = 0;
+    for (const vessel of vessels) {
+      sogSum += vessel.sogKn;
+      if (vessel.hasSceneDynamics) dynamicsCount += 1;
+    }
+    model.fleet.speedKn = clamp(sogSum / Math.max(1, vessels.length), 0, 40);
+    model.dynamicsActive = dynamicsCount > 0;
     recomputeStationErrors();
     updateSea(model.t);
     updateMission(model.met);
@@ -779,6 +889,9 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     getFleet() {
       return model.fleet;
     },
+    getManoeuvring() {
+      return { formationTransition: !!model.formationTransition, manoeuvring: !!model.manoeuvring };
+    },
     getSea() {
       return model.sea;
     },
@@ -828,6 +941,8 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       return overrides.stationErrorM.has(id);
     },
     getDebug() {
+      const dynamicsVessels = vessels.filter((v) => v.hasSceneDynamics).length;
+      const meanSogKn = vessels.reduce((sum, v) => sum + v.sogKn, 0) / Math.max(1, vessels.length);
       return {
         t: round1(model.t),
         met: round1(model.met),
@@ -835,6 +950,10 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
         estopActive: model.estopActive,
         fleetMode: model.fleet.mode,
         missingFrames: model.missingFrames,
+        sceneFleetSpeedKn: round1(model.sceneFleetSpeed),
+        meanGroundSpeedKn: round1(meanSogKn),
+        dynamicsActive: model.dynamicsActive,
+        dynamicsVessels,
         overrides: {
           batteryPct: overrides.batteryPct.size,
           linkLatencyMs: overrides.linkLatencyMs.size,

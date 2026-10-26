@@ -311,6 +311,11 @@ export function createSim({ scene, meta, options } = {}) {
     const avgBatteryPct = vessels.length
       ? round1(vessels.reduce((sum, v) => sum + v.batteryPct, 0) / vessels.length)
       : 0;
+    // Real mean ground speed of the 17 hulls (task-8): the 3-DOF dynamics model
+    // makes commanded acceleration / deceleration visible here.
+    const meanSogKn = vessels.length
+      ? vessels.reduce((sum, v) => sum + v.sogKn, 0) / vessels.length
+      : fleet.speedKn;
 
     // --- data link aggregate ------------------------------------------------
     const onlineVessels = vessels.filter((v) => !v.offline);
@@ -357,7 +362,7 @@ export function createSim({ scene, meta, options } = {}) {
         lon: roundTo6(center.lon),
       },
       headingDeg: round1(fleet.headingDeg),
-      speedKn: round1(fleet.speedKn),
+      speedKn: round1(meanSogKn),
       speedScale: round2(fleet.speedScale),
       speedKnMax: round1(fleet.speedKnMax),
       mode: fleet.mode,
@@ -452,6 +457,13 @@ export function createSim({ scene, meta, options } = {}) {
       headingDeg: round1(vessel.headingDeg),
       cogDeg: round1(vessel.cogDeg),
       sogKn: round1(vessel.sogKn),
+      // --- 3-DOF manoeuvring telemetry (task-8, passed through from the scene)
+      uKn: round1(safeNumber(vessel.uMS, 0) * KNOTS_PER_MS),
+      swayKn: round2(safeNumber(vessel.swayMS, 0) * KNOTS_PER_MS),
+      driftDeg: round1(safeNumber(vessel.driftDeg, 0)),
+      yawRateDegS: round1(safeNumber(vessel.yawRateDegS, 0)),
+      rudderDeg: round1(clamp(safeNumber(vessel.rudderDeg, 0), -30, 30)),
+      throttlePct: round1(clamp(safeNumber(vessel.throttlePct, 0), 0, 100)),
       depthM: round1(vessel.depthM),
       pitchDeg: round1(vessel.pitchDeg),
       rollDeg: round1(vessel.rollDeg),
@@ -530,6 +542,7 @@ export function createSim({ scene, meta, options } = {}) {
         estopActive: model.getEstopState().active,
         estopSinceMet: model.getEstopState().sinceMet,
         total: model.getVessels().length,
+        ...model.getManoeuvring(),
       },
     });
     state.dirty = true;
@@ -650,6 +663,7 @@ export function createSim({ scene, meta, options } = {}) {
     seed,
     version: '2.0.0',
     state() {
+      const telemetry = model.getDebug();
       return {
         seed,
         seedHex: `0x${seed.toString(16)}`,
@@ -667,7 +681,15 @@ export function createSim({ scene, meta, options } = {}) {
         alarms: alarms.size(),
         acks: ackLog.items.length,
         pending: commandBus.pendingTickets(),
-        telemetry: model.getDebug(),
+        // task-8: true when the scene supplies real 3-DOF vessel dynamics
+        dynamics: {
+          available: telemetry.dynamicsActive,
+          vessels: telemetry.dynamicsVessels,
+          total: domain.roster.length,
+          meanGroundSpeedKn: telemetry.meanGroundSpeedKn,
+          sceneFleetSpeedKn: telemetry.sceneFleetSpeedKn,
+        },
+        telemetry,
       };
     },
     pending() {
@@ -917,6 +939,14 @@ export function validateSnapshot(snap, expected = {}) {
       for (const key of ['x', 'z', 'lat', 'lon', 'headingDeg', 'cogDeg', 'sogKn', 'depthM', 'pitchDeg', 'rollDeg', 'heaveM', 'batteryPct', 'powerKw', 'voltageV', 'currentA', 'tempC', 'cpuPct', 'distToFleetM']) {
         number(`${at}.${key}`, v[key]);
       }
+      // task-8 manoeuvring telemetry (appended fields; always finite numbers)
+      for (const key of ['uKn', 'swayKn', 'driftDeg', 'yawRateDegS', 'rudderDeg', 'throttlePct']) {
+        number(`${at}.${key}`, v[key]);
+      }
+      number(`${at}.throttlePct`, v.throttlePct, { min: 0, max: 100 });
+      number(`${at}.rudderDeg`, v.rudderDeg, { min: -30, max: 30 });
+      number(`${at}.driftDeg`, v.driftDeg, { min: -180, max: 180 });
+      number(`${at}.yawRateDegS`, v.yawRateDegS, { min: -180, max: 180 });
       number(`${at}.batteryPct`, v.batteryPct, { min: 0, max: 100 });
       oneOf(`${at}.status`, v.status, STATUS_KEYS);
       oneOf(`${at}.mode`, v.mode, VESSEL_MODE_KEYS);
@@ -948,6 +978,26 @@ export function validateSnapshot(snap, expected = {}) {
         }
       }
     });
+  }
+
+  // task-8 cross-checks: fleet.speedKn is the mean ground speed of the hulls and
+  // driftDeg is the signed (COG − heading) difference.
+  if (snap.fleet && Array.isArray(snap.vessels) && snap.vessels.length && Number.isFinite(snap.fleet.speedKn)) {
+    const meanSog = snap.vessels.reduce((sum, v) => sum + (Number.isFinite(v && v.sogKn) ? v.sogKn : 0), 0) / snap.vessels.length;
+    if (Math.abs(snap.fleet.speedKn - meanSog) > 0.35) {
+      fail('fleet.speedKn', `expected mean ground speed ${meanSog.toFixed(2)} kn, got ${snap.fleet.speedKn}`);
+    }
+    for (let i = 0; i < snap.vessels.length; i++) {
+      const v = snap.vessels[i];
+      if (!v || !Number.isFinite(v.driftDeg) || !Number.isFinite(v.cogDeg) || !Number.isFinite(v.headingDeg)) continue;
+      let expected = v.cogDeg - v.headingDeg;
+      while (expected > 180) expected -= 360;
+      while (expected < -180) expected += 360;
+      if (Math.abs(v.driftDeg - expected) > 0.6) {
+        fail(`vessels[${i}].driftDeg`, `expected signed(cog-heading)=${expected.toFixed(1)}, got ${v.driftDeg}`);
+        break;
+      }
+    }
   }
 
   if (!Array.isArray(snap.events)) fail('events', 'expected array');

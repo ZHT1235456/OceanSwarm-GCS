@@ -40,6 +40,9 @@ const RAW_FIELDS = [
   ['uptime', 'uptime'],
   ['cpu', 'cpu'],
   ['alarm', 'alarm'],
+  ['sway', 'sway kn'],
+  ['drift', 'drift °'],
+  ['cog', 'cog °'],
 ];
 
 const mmss = (sec) => {
@@ -298,6 +301,9 @@ export function createDetailPanel(ctx) {
                 <div class="gcs-kv"><span class="gcs-kv-k">纵摇 PITCH</span><span class="gcs-kv-v" data-ref="pitch">—</span></div>
                 <div class="gcs-kv"><span class="gcs-kv-k">横摇 ROLL</span><span class="gcs-kv-v" data-ref="roll">—</span></div>
                 <div class="gcs-kv"><span class="gcs-kv-k">升沉 HEAVE</span><span class="gcs-kv-v" data-ref="heave">—</span></div>
+                <div class="gcs-kv"><span class="gcs-kv-k">舵角 RUDDER</span><span class="gcs-kv-v" data-ref="rudder">—</span></div>
+                <div class="gcs-kv"><span class="gcs-kv-k">油门 THR</span><span class="gcs-kv-v" data-ref="throttle">—</span></div>
+                <div class="gcs-kv"><span class="gcs-kv-k">艏摇 RATE</span><span class="gcs-kv-v" data-ref="yawRate">—</span></div>
               </div>
             </div>
           </section>
@@ -623,6 +629,11 @@ export function createDetailPanel(ctx) {
     setText(refs.heave, fmt.mtr(vessel.heaveM));
     setText(refs.attMeta, `航向 ${fmt.hdg(vessel.headingDeg)}`);
 
+    // --- 3b. manoeuvring telemetry (3-DOF plant truth) -----------------------
+    setText(refs.rudder, Number.isFinite(vessel.rudderDeg) ? `${fmt.signed(vessel.rudderDeg, 1)}` : '—');
+    setText(refs.throttle, Number.isFinite(vessel.throttlePct) ? fmt.pct(vessel.throttlePct, 0) : '—');
+    setText(refs.yawRate, Number.isFinite(vessel.yawRateDegS) ? `${fmt.signed(vessel.yawRateDegS, 2)}°/s` : '—');
+
     // --- 4. data link --------------------------------------------------------
     const link = vessel.link || {};
     const quality = Number.isFinite(link.quality) ? Math.max(0, Math.min(1, link.quality)) : null;
@@ -659,6 +670,9 @@ export function createDetailPanel(ctx) {
     setText(rawRefs.get('uptime'), fmt.hms(vessel.uptimeSec));
     setText(rawRefs.get('cpu'), fmt.pct(vessel.cpuPct, 1));
     setText(rawRefs.get('alarm'), `${fmt.int(vessel.alarmCount)} 条`);
+    setText(rawRefs.get('sway'), Number.isFinite(vessel.swayKn) ? fmt.num(vessel.swayKn, 2) : '—');
+    setText(rawRefs.get('drift'), Number.isFinite(vessel.driftDeg) ? fmt.signed(vessel.driftDeg, 1) : '—');
+    setText(rawRefs.get('cog'), Number.isFinite(vessel.cogDeg) ? fmt.hdg(vessel.cogDeg) : '—');
 
     // --- instruments (after layout: the energy chart stretches to the rail) --
     drawInstruments(vessel);
