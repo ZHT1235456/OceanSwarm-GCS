@@ -53,6 +53,24 @@ const CHARGE_RATE = { energy: 0.0019 };
 // 链路延时 alarm can occur naturally (docs acceptance: link alarm must exist).
 const DEGRADATION = { startSec: 48, cycleSec: 170, durationSec: 24 };
 
+// Speed over ground is derived from the commanded fleet speed (the scene truth)
+// with small per-class offsets, so the roster reads as one coherent formation
+// instead of 17 independently measured values. Single-vessel autonomous modes
+// get the mission-planning speeds from docs §6.8.
+const SOG_FACTOR = {
+  flagship: 1.0,
+  scout: 1.08,
+  env: 0.94,
+  survey: 0.97,
+  patrol: 1.05,
+  comms: 1.0,
+  energy: 0.91,
+  rescue: 1.03,
+};
+const SOG_AUTO_KN = 12.2; // swarm-control vessel.goto speed 6.6 m/s
+const SOG_VESSEL_RTL_KN = 7.6;
+const SOG_HOLD_KN = 0.4; // idle boats still ride the swell
+
 // Approximate bathymetry around the inherited scene landmarks (fallback only —
 // the sim has no bathymetry channel from the scene).
 const SHOALS = [
@@ -167,6 +185,7 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       rollDeg: safeNumber(sceneVessel?.rollRad, 0) / DEG,
       heaveM: safeNumber(sceneVessel?.heaveM, 0),
       sogKn: 0,
+      sogFactor: clamp((SOG_FACTOR[spec.type] ?? 1) + telemetryRng.range(-0.025, 0.025), 0.8, 1.2),
       sceneMode: normalizeSceneMode(sceneVessel?.mode),
       waypoint: normalizeWaypoint(sceneVessel?.waypoint),
       batteryPct,
@@ -260,7 +279,7 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
   applyFleetState(initialFleet, 0);
   for (const vessel of vessels) {
     vessel.depthM = round1(waterDepthAt(vessel.x, vessel.z));
-    vessel.sogKn = round1(model.fleet.speedKn);
+    vessel.sogKn = round1(model.fleet.speedKn * vessel.sogFactor);
     vessel.cogDeg = vessel.headingDeg;
     updateLink(vessel, 0);
     // Converge the power / thermal filters to the cruise operating point so the
@@ -421,14 +440,6 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
 
     if (dt > 0) {
       const distance = Math.hypot(vessel.x - vessel.prevX, vessel.z - vessel.prevZ);
-      const measured = (distance / dt) * KNOTS_PER_MS;
-      let sogTarget = Number.isFinite(measured) && measured < 45 ? measured : vessel.sogKn;
-      if (sogTarget < 0.06) sogTarget = 0;
-      const kSog = 1 - Math.exp(-dt / 0.55);
-      const jitter = Math.sin(model.t * 1.7 + vessel.noisePhases.sog) * 0.035 + (telemetryRng() - 0.5) * 0.03;
-      vessel.sogKn = clamp(vessel.sogKn + (sogTarget - vessel.sogKn) * kSog + jitter * 0.3, 0, 30);
-      if (vessel.sogKn < 0.05) vessel.sogKn = 0;
-
       if (distance > 0.03) {
         const cogTarget = normalizeDeg(Math.atan2(vessel.x - vessel.prevX, -(vessel.z - vessel.prevZ)) / DEG);
         vessel.cogDeg = normalizeDeg(vessel.cogDeg + angleDeltaDeg(vessel.cogDeg, cogTarget) * (1 - Math.exp(-dt / 0.9)));
@@ -438,6 +449,37 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     } else {
       vessel.cogDeg = vessel.headingDeg;
     }
+  }
+
+  /**
+   * Speed over ground: the scene's commanded fleet speed (already includes the
+   * speed preset) times a small per-class factor, plus a smooth seeded wobble.
+   * Autonomous / hold / RTB boats follow their own planning speeds.
+   */
+  function updateSog(vessel, dt) {
+    const ph = vessel.noisePhases.sog;
+    const smooth =
+      Math.sin(model.t * 0.37 + ph) * 0.12 +
+      Math.sin(model.t * 0.11 + ph * 1.7) * 0.08 +
+      Math.sin(model.t * 0.83 + ph * 2.3) * 0.04;
+    const fleetStop = model.estopActive || model.fleet.mode === 'hold' || model.fleet.mode === 'estop' || model.fleet.speedKn < 0.3;
+    let target;
+    if (vessel.offline) {
+      target = 0;
+    } else if (vessel.sceneMode === 'auto') {
+      target = SOG_AUTO_KN + smooth;
+    } else if (vessel.sceneMode === 'rtl') {
+      target = SOG_VESSEL_RTL_KN + smooth * 0.5;
+    } else if (vessel.sceneMode === 'hold') {
+      target = fleetStop ? SOG_HOLD_KN + Math.abs(smooth) * 0.3 : SOG_HOLD_KN + Math.abs(smooth) * 0.6;
+    } else if (fleetStop) {
+      target = SOG_HOLD_KN + Math.abs(smooth) * 0.2;
+    } else {
+      target = model.fleet.speedKn * vessel.sogFactor + smooth;
+    }
+    const k = 1 - Math.exp(-dt / 1.1);
+    vessel.sogKn = clamp(vessel.sogKn + (clamp(target, 0, 30) - vessel.sogKn) * k, 0, 30);
+    if (vessel.sogKn < 0.04) vessel.sogKn = 0;
   }
 
   function recomputeStationErrors() {
@@ -517,18 +559,25 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     }
     const phase = phases[Math.min(phaseIndex, phases.length - 1)] || phases[0];
     const duration = Math.max(1, phase.durationSec);
-    const waypoint = M.waypoints[phaseIndex % Math.max(1, M.waypoints.length)] || M.waypoints[0] || null;
+    const waypointIndex0 = M.waypoints.length ? phaseIndex % M.waypoints.length : 0;
+    const waypoint = M.waypoints[waypointIndex0] || M.waypoints[0] || null;
     const mission = model.mission;
-    mission.phaseIndex = phaseIndex;
+    // Contract: phaseIndex / waypointIndex are 1-based (matches the UI panels
+    // and the bootstrap mock); the 0-based variants stay available as extras.
+    mission.phaseIndex = phaseIndex + 1;
+    mission.phaseNo = phaseIndex + 1;
+    mission.phaseIndex0 = phaseIndex;
     mission.phaseCount = phases.length;
     mission.phaseName = phase.name;
     mission.phaseEn = phase.en;
     mission.phaseProgress = clamp((pos - phaseStart) / duration, 0, 1);
     mission.overallProgress = clamp(cycle > 0 ? pos / cycle : 0, 0, 1);
-    mission.waypointIndex = M.waypoints.length ? phaseIndex % M.waypoints.length : 0;
+    mission.waypointIndex = waypointIndex0 + 1;
+    mission.waypointNo = waypointIndex0 + 1;
+    mission.waypointIndex0 = waypointIndex0;
     mission.waypointTotal = M.waypoints.length;
     mission.waypointId = waypoint ? waypoint.id : '';
-    mission.waypointName = waypoint ? waypoint.name : '';
+    mission.waypointName = waypoint ? `${waypoint.id} ${waypoint.name}` : '';
     mission.etaSec = Math.max(0, Math.round(cycle - pos));
   }
 
@@ -595,20 +644,22 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     const rated = Math.max(1, vessel.spec.powerKw || 8);
     const speedRatio = clamp(vessel.sogKn / Math.max(1e-3, model.fleet.speedKnMax), 0, 2.2);
     const sensorsOn = vessel.sensors.reduce((sum, s) => sum + (s.on ? 1 : 0), 0);
-    const load = clamp(0.16 + 0.6 * speedRatio + sensorsOn * 0.022 + Math.sin(model.t * 0.37 + vessel.noisePhases.power) * 0.015, 0.12, 1.7);
+    // Hotel load + propulsion + payload draw, expressed as a fraction of the
+    // class rated power (keeps currents inside a believable 48 V bus range).
+    const load = clamp(0.07 + 0.2 * speedRatio + sensorsOn * 0.008 + Math.sin(model.t * 0.37 + vessel.noisePhases.power) * 0.01, 0.05, 1.1);
     const targetPower = rated * load;
     const kPower = 1 - Math.exp(-dt / 1.2);
-    vessel.powerKw = clamp(vessel.powerKw + (targetPower - vessel.powerKw) * kPower, 0.5, rated * 2.2);
+    vessel.powerKw = clamp(vessel.powerKw + (targetPower - vessel.powerKw) * kPower, 0.3, rated * 1.4);
 
     const openCircuit = 50.6 - (100 - clamp(vessel.batteryPct, 0, 100)) * 0.06;
     const current = (vessel.powerKw * 1000) / Math.max(38, openCircuit);
     vessel.currentA = round1(current);
     vessel.voltageV = clamp(openCircuit - current * 0.0016, 36, 54);
 
-    const tempTarget = 23.2 + load * 12 + Math.sin(model.t * 0.11 + vessel.noisePhases.temp) * 0.8;
+    const tempTarget = 31 + load * 17 + Math.sin(model.t * 0.11 + vessel.noisePhases.temp) * 0.8;
     vessel.tempC = vessel.tempC + (tempTarget - vessel.tempC) * (1 - Math.exp(-dt / 4));
 
-    const cpuTarget = clamp(22 + load * 30 + sensorsOn * 2.4 + rng() * 5, 8, 97);
+    const cpuTarget = clamp(22 + load * 34 + sensorsOn * 2.4 + rng() * 5, 8, 97);
     vessel.cpuPct = vessel.cpuPct + (cpuTarget - vessel.cpuPct) * (1 - Math.exp(-dt / 1.8));
   }
 
@@ -650,6 +701,7 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
 
     for (const vessel of vessels) {
       applyVesselSceneState(vessel, sceneState, dt);
+      updateSog(vessel, dt);
       updateBattery(vessel, dt);
       updatePower(vessel, dt, telemetryRng);
       updateLink(vessel, model.t);
@@ -659,6 +711,41 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
     recomputeStationErrors();
     updateSea(model.t);
     updateMission(model.met);
+  }
+
+  /**
+   * Sync only the CONTROL truth (fleet mode / formation / e-stop / vessel modes
+   * and waypoints) from the scene — used after a command executes while the
+   * scene is paused: telemetry time / battery / link stay frozen, but the console
+   * must immediately show e.g. 急停 armed or RTL active.
+   */
+  function syncControlState(sceneState) {
+    const ss = sceneState && typeof sceneState === 'object' ? sceneState : {};
+    applyFleetState(ss.fleet, 0);
+    const list = Array.isArray(ss.vessels) ? ss.vessels : [];
+    const byId = new Map(list.filter((v) => v && v.id).map((v) => [v.id, v]));
+    for (const vessel of vessels) {
+      const sv = byId.get(vessel.spec.id);
+      if (!sv) continue;
+      if (Number.isFinite(sv.x)) vessel.x = sv.x;
+      if (Number.isFinite(sv.z)) vessel.z = sv.z;
+      if (Number.isFinite(sv.yawRad)) vessel.yawRad = sv.yawRad;
+      if (Number.isFinite(sv.headingDeg)) vessel.headingDeg = normalizeDeg(sv.headingDeg);
+      if (Number.isFinite(sv.pitchRad)) vessel.pitchDeg = sv.pitchRad / DEG;
+      if (Number.isFinite(sv.rollRad)) vessel.rollDeg = sv.rollRad / DEG;
+      if (Number.isFinite(sv.heaveM)) vessel.heaveM = sv.heaveM;
+      if (sv.mode !== undefined) vessel.sceneMode = normalizeSceneMode(sv.mode);
+      if (sv.waypoint !== undefined) vessel.waypoint = normalizeWaypoint(sv.waypoint);
+      if (Number.isFinite(sv.stationErrorM)) {
+        vessel.stationErrorM = Math.max(0, sv.stationErrorM);
+        vessel.stationSource = 'scene';
+      } else {
+        const override = overrides.stationErrorM.get(vessel.spec.id);
+        if (override !== undefined) vessel.stationErrorM = override;
+      }
+    }
+    applyOverridesAndSensors();
+    recomputeStationErrors();
   }
 
   return {
@@ -675,6 +762,8 @@ export function createTelemetryModel({ domain, seed, clock, options = {}, initia
       }
       return steps;
     },
+    /** Control-truth refresh without advancing telemetry (paused command ack). */
+    syncControlState,
     getTime() {
       return model.t;
     },

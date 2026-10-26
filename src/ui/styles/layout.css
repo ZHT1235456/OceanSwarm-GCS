@@ -259,25 +259,8 @@ body.gcs-clean .gcs-clean-hint {
   }
 }
 
-/* --- scrollbars (shared; design owner may refine in base.css) ------------- */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(140, 224, 238, 0.22) transparent;
-}
-*::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-*::-webkit-scrollbar-thumb {
-  background: rgba(140, 224, 238, 0.22);
-  border-radius: 2px;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 224, 238, 0.4);
-}
+/* Scrollbars are owned by base.css (§6.8 .gcs-scroll / #gcs-root rules) so the
+   custom 4 px track survives Chromium's native thin-scrollbar behaviour. */
 
 ::selection {
   background: rgba(95, 243, 228, 0.24);

@@ -233,18 +233,29 @@ export function createLeftPanel(ctx) {
     const metText = typeof snap.metText === 'string' && snap.metText.trim() ? snap.metText : fmt.hms(snap.met);
     setText(r.metEl, metText || DASH);
 
-    // ---- current waypoint
+    // ---- current waypoint. The sim provides waypointId / waypointName (pure
+    // name) plus a 0-based waypointIndex & 1-based waypointNo; the bootstrap
+    // mock provides a 1-based waypointIndex and a "WP-xx name" label.
     const wpList = md.waypoints;
     const wpTotal = isNum(m.waypointTotal) && m.waypointTotal > 0 ? Math.round(m.waypointTotal) : wpList.length;
+    const wpLabel = typeof m.waypointName === 'string' ? m.waypointName.trim() : '';
     let wp = null;
-    if (typeof m.waypointName === 'string' && m.waypointName) {
-      wp = wpList.find((w) => w.name === m.waypointName) || null;
+    if (typeof m.waypointId === 'string' && m.waypointId) {
+      wp = wpList.find((w) => w.id === m.waypointId) || null;
+    }
+    if (!wp && wpLabel) {
+      // tolerate "WP-04 测绘海域" as well as the plain "测绘海域"
+      wp = wpList.find((w) => w.name === wpLabel || wpLabel.startsWith(w.id)) || null;
+    }
+    if (!wp && isNum(m.waypointNo) && m.waypointNo >= 1) {
+      wp = wpList[clamp(Math.round(m.waypointNo), 1, wpTotal) - 1] || null;
     }
     if (!wp && isNum(m.waypointIndex)) {
       wp = wpList[clamp(Math.round(m.waypointIndex), 1, wpTotal) - 1] || null;
     }
+    const wpName = wpLabel ? wpLabel.replace(/^WP-\d+\s+/, '') : (wp && wp.name) || DASH;
     setText(r.wpIdEl, wp ? wp.id : DASH);
-    setText(r.wpNameEl, m.waypointName || (wp && wp.name) || DASH);
+    setText(r.wpNameEl, wpName || DASH);
 
     updateMapButton(ctx.state.viewMode);
   }
@@ -262,7 +273,9 @@ export function createLeftPanel(ctx) {
   function buildRoster() {
     const onlineEl = h('span', { class: 'left-meta-online', text: `${DASH}/${meta.FLEET.length}` });
     const avgEl = h('span', { class: 'left-meta-avg', text: DASH });
-    const alertEl = h('span', { class: 'left-meta-alerts', text: `告警 ${DASH}` });
+    const alertDot = h('i', { class: 'left-meta-alert-dot', attrs: { 'aria-hidden': 'true' } });
+    const alertText = h('span', { class: 'left-meta-alert-text', text: `告警 ${DASH}` });
+    const alertEl = h('span', { class: 'left-meta-alerts' }, alertDot, alertText);
     const metaEl = h(
       'span',
       { class: 'gcs-panel-meta left-fleet-meta', attrs: { title: '在线数 · 平均电量 · 活动告警' } },
@@ -307,7 +320,7 @@ export function createLeftPanel(ctx) {
       body,
     );
 
-    return { el, listEl, rows, groups, onlineEl, avgEl, alertEl };
+    return { el, listEl, rows, groups, onlineEl, avgEl, alertEl, alertDot, alertText };
   }
 
   function buildRow(spec) {
@@ -474,11 +487,12 @@ export function createLeftPanel(ctx) {
     let alertCount = null;
     if (isNum(alerts.critical) || isNum(alerts.warning)) alertCount = (alerts.critical || 0) + (alerts.warning || 0);
     else if (Array.isArray(snap.alarms)) alertCount = snap.alarms.length;
-    setText(r.alertEl, alertCount == null ? `告警 ${DASH}` : `告警 ${alertCount}`);
+    setText(r.alertText, alertCount == null ? `告警 ${DASH}` : `告警 ${alertCount}`);
     const hasCritical = isNum(alerts.critical) && alerts.critical > 0;
     setClass(r.alertEl, 'gcs-txt--danger', hasCritical);
     setClass(r.alertEl, 'gcs-txt--warn', !hasCritical && !!alertCount);
     setClass(r.alertEl, 'gcs-txt--4', alertCount === 0);
+    setClass(r.alertDot, 'is-on', !!alertCount);
 
     // per-group online count
     for (const group of r.groups) {
@@ -734,9 +748,8 @@ export function createLeftPanel(ctx) {
   // ---------------------------------------------------------------------------
   // command dispatch → pending → ack feedback
   // ---------------------------------------------------------------------------
-  const PENDING_MIN_MS = 120;
-  const PENDING_MAX_MS = 2800;
-  const FIFO_FALLBACK_MS = 900;
+  const PENDING_MIN_MS = 120; // keep the pending state visible long enough to read
+  const PENDING_MAX_MS = 1500; // hard fallback if the ack never arrives
 
   function armPending(key, btn, keywords) {
     const existing = pending.get(key);
@@ -832,15 +845,30 @@ export function createLeftPanel(ctx) {
         break;
       }
     }
-    // pass 2 — FIFO fallback for acks with unexpected wording
-    for (const [key, entry] of [...pending]) {
-      if (performance.now() - entry.since < FIFO_FALLBACK_MS) continue;
+    // pass 2 — the ack text is a human sentence, not a command type: any fresh
+    // successful ack is enough to release the oldest remaining pending button.
+    for (const [key] of [...pending]) {
+      let hit = -1;
       for (let i = 0; i < fresh.length; i++) {
-        if (used.has(i)) continue;
-        used.add(i);
-        resolvePending(key, fresh[i].ok !== false);
+        if (used.has(i) || fresh[i].ok === false) continue;
+        hit = i;
         break;
       }
+      if (hit < 0) continue;
+      used.add(hit);
+      resolvePending(key, true);
+    }
+    // pass 3 — a rejected ack still ends the pending state, just without the flash
+    for (const [key] of [...pending]) {
+      let hit = -1;
+      for (let i = 0; i < fresh.length; i++) {
+        if (used.has(i)) continue;
+        hit = i;
+        break;
+      }
+      if (hit < 0) continue;
+      used.add(hit);
+      resolvePending(key, false);
     }
   }
 
@@ -906,4 +934,22 @@ export function createLeftPanel(ctx) {
 
   function destroy() {
     destroyed = true;
-    for (const off of un
+    for (const off of unsubs.splice(0)) {
+      try {
+        off();
+      } catch {
+        /* ignore */
+      }
+    }
+    for (const entry of pending.values()) clearTimeout(entry.timer);
+    pending.clear();
+  }
+
+  return {
+    name: 'left',
+    mount,
+    update,
+    frame() {},
+    destroy,
+  };
+}

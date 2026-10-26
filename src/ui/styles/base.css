@@ -841,14 +841,20 @@
 /* =============================================================================
    9. SCROLLBARS (§6.8) — 4px rail, transparent track
    -----------------------------------------------------------------------------
-   NOTE: layout.css sets a global `scrollbar-width: thin`; in Chromium any
-   non-auto scrollbar-width disables ::-webkit-scrollbar styling, so the GCS
-   tree re-asserts `auto` here (id specificity wins over layout's `*`) and the
-   4px rail below stays authoritative. Firefox gets the standard thin fallback.
+   NOTE: layout.css loads AFTER base.css and sets a global
+   `scrollbar-width: thin; scrollbar-color: <colour>;`. In Chromium ANY non-initial
+   value of either standard scrollbar property disables ::-webkit-scrollbar
+   styling (native scrollbars then render, 15px wide on Windows). The GCS tree
+   therefore re-asserts BOTH standard properties to their initial values with an
+   id-scoped selector (beats layout's `*` regardless of order) so the 4px rail
+   below stays authoritative. Verified with artifacts/design/scroll-audit.mjs:
+   base 4px → layout rules 15px → this override 4px.
+   Firefox / engines without the webkit pseudo keep the standard thin fallback.
    ============================================================================= */
 #gcs-root,
 #gcs-root * {
   scrollbar-width: auto;
+  scrollbar-color: auto;
 }
 
 #gcs-root *::-webkit-scrollbar {

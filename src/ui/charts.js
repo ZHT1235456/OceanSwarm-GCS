@@ -117,15 +117,15 @@ function roundRectPath(ctx, x, y, w, h, r) {
 // =============================================================================
 // 1. ATTITUDE — artificial horizon (§7.5 item 3)
 //    roll −30…30°, pitch ladder in 10° steps, cyan horizon line, fixed aircraft
-//    reticle and fixed roll scale. Sized by CSS (default 132×66).
+//    reticle and fixed roll scale. Sized by CSS (default 132×64). The compass
+//    heading is intentionally NOT drawn here — the section head owns it.
 // =============================================================================
 export function drawHorizon(canvas, opts = {}) {
-  const { rollDeg = 0, pitchDeg = 0, headingDeg } = opts;
+  const { rollDeg = 0, pitchDeg = 0 } = opts;
   const { ctx, w, h } = fitCanvas(canvas);
   if (!ctx) return;
 
   const accent = cssVar('--gcs-accent', '#5ff3e4');
-  const ice = cssVar('--gcs-accent-2', '#9fd6e8');
   const text3 = cssVar('--gcs-text-3', 'rgba(188,220,229,.44)');
   const lineFaint = cssVar('--gcs-line-faint', 'rgba(140,224,238,.07)');
 
@@ -134,16 +134,16 @@ export function drawHorizon(canvas, opts = {}) {
   const cx = w / 2;
   const cy = h / 2;
   const big = Math.hypot(w, h) * 1.4;
-  const ppd = h / 54; // pixels per degree — ±27° fills the instrument height
+  const ppd = h / 60; // pixels per degree — ±30° spans the instrument height
 
   ctx.save();
   roundRectPath(ctx, 0.5, 0.5, w - 1, h - 1, 2);
   ctx.clip();
 
-  // --- sky (fixed gradient) -------------------------------------------------
+  // --- sky (fixed gradient, a touch lighter towards the horizon) ------------
   const sky = ctx.createLinearGradient(0, 0, 0, cy);
-  sky.addColorStop(0, cssVar('--gcs-ink-900', '#06202c'));
-  sky.addColorStop(1, 'rgba(16, 58, 74, 0.92)');
+  sky.addColorStop(0, 'rgba(20, 64, 80, 0.92)');
+  sky.addColorStop(1, cssVar('--gcs-ink-900', '#06202c'));
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
@@ -153,33 +153,33 @@ export function drawHorizon(canvas, opts = {}) {
   ctx.rotate((-roll * Math.PI) / 180);
   const horizonY = pitch * ppd;
 
-  const sea = ctx.createLinearGradient(0, horizonY, 0, horizonY + big * 0.6);
-  sea.addColorStop(0, 'rgba(12, 40, 52, 0.98)');
+  const sea = ctx.createLinearGradient(0, horizonY, 0, horizonY + big * 0.35);
+  sea.addColorStop(0, 'rgba(10, 34, 45, 0.98)');
   sea.addColorStop(1, cssVar('--gcs-ink-1000', '#020b12'));
   ctx.fillStyle = sea;
   ctx.fillRect(-big, horizonY, big * 2, big);
 
-  // pitch ladder (10° steps, ±20° visible)
+  // pitch ladder — only bars that stay clear of the frame get labels
   ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(159, 214, 232, 0.34)';
+  ctx.strokeStyle = 'rgba(159, 214, 232, 0.38)';
   ctx.fillStyle = text3;
-  ctx.font = monoFont(6.5);
+  ctx.font = monoFont(6);
   ctx.textBaseline = 'middle';
-  for (let deg = -20; deg <= 20; deg += 10) {
-    if (deg === 0) continue;
+  for (const deg of [-20, -10, 10, 20]) {
     const y = Math.round(horizonY - deg * ppd) + 0.5;
-    const half = deg % 20 === 0 ? w * 0.24 : w * 0.15;
+    if (y < 12 || y > h - 12) continue;
+    const half = deg % 20 === 0 ? w * 0.19 : w * 0.13;
     ctx.beginPath();
-    ctx.moveTo(-half - 8, y);
-    ctx.lineTo(-8, y);
-    ctx.moveTo(8, y);
-    ctx.lineTo(half + 8, y);
+    ctx.moveTo(-half - 6, y);
+    ctx.lineTo(-7, y);
+    ctx.moveTo(7, y);
+    ctx.lineTo(half + 6, y);
     ctx.stroke();
     const label = `${deg > 0 ? '+' : '−'}${Math.abs(deg)}`;
     ctx.textAlign = 'right';
-    ctx.fillText(label, -half - 10, y);
+    ctx.fillText(label, -half - 8, y);
     ctx.textAlign = 'left';
-    ctx.fillText(label, half + 10, y);
+    ctx.fillText(label, half + 8, y);
   }
 
   // horizon line — cyan with a restrained glow
@@ -207,28 +207,28 @@ export function drawHorizon(canvas, opts = {}) {
   ctx.restore();
 
   // --- fixed roll scale (ticks stay level while the horizon rotates) --------
-  const arcR = Math.min(w, h) * 0.46;
+  const arcR = Math.min(w, h) * 0.45;
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.strokeStyle = 'rgba(159, 214, 232, 0.4)';
+  ctx.strokeStyle = 'rgba(159, 214, 232, 0.42)';
   ctx.fillStyle = text3;
   ctx.lineWidth = 1;
-  ctx.font = enFont(6, 500);
+  ctx.font = enFont(5.5, 500);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  for (let deg = -30; deg <= 30; deg += 10) {
+  for (let deg = -30; deg <= 30; deg += 5) {
     const a = (deg * Math.PI) / 180;
-    const major = deg % 20 === 0;
+    const major = deg % 10 === 0;
     const r0 = arcR;
-    const r1 = arcR - (major ? 4.5 : 3);
-    ctx.globalAlpha = deg === 0 ? 0.95 : 0.6;
+    const r1 = arcR - (major ? 4 : 2);
+    ctx.globalAlpha = deg === 0 ? 0.95 : major ? 0.62 : 0.32;
     ctx.beginPath();
     ctx.moveTo(Math.sin(a) * r0, -Math.cos(a) * r0);
     ctx.lineTo(Math.sin(a) * r1, -Math.cos(a) * r1);
     ctx.stroke();
-    if (major) {
-      ctx.globalAlpha = 0.55;
-      ctx.fillText(String(Math.abs(deg)), Math.sin(a) * (r0 - 9), -Math.cos(a) * (r0 - 9));
+    if (major && deg !== 0) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillText(String(Math.abs(deg)), Math.sin(a) * (r0 - 8), -Math.cos(a) * (r0 - 8));
     }
   }
   // fixed roll pointer at 12 o'clock
@@ -270,16 +270,6 @@ export function drawHorizon(canvas, opts = {}) {
     ctx.lineTo(x, y);
     ctx.lineTo(x, y + sy * c);
     ctx.stroke();
-  }
-
-  // heading readout, bottom-right (kept tiny: the right column owns the numbers)
-  if (isNum(headingDeg)) {
-    const hdg = String(((Math.round(headingDeg) % 360) + 360) % 360).padStart(3, '0');
-    ctx.fillStyle = text3;
-    ctx.font = monoFont(7);
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(`HDG ${hdg}°`, w - 4, h - 3);
   }
   ctx.restore();
 
@@ -435,7 +425,7 @@ export function drawAreaLine(canvas, opts = {}) {
   const line = cssVar('--gcs-line', 'rgba(140,224,238,.14)');
 
   const padL = showAxis ? 17 : 2;
-  const padR = 2;
+  const padR = 4;
   const padT = 4;
   const padB = 3;
   const plotW = Math.max(1, w - padL - padR);
@@ -454,14 +444,16 @@ export function drawAreaLine(canvas, opts = {}) {
   let t0 = t1 - windowSec;
   if (!valid.length) {
     t0 = t1 - Math.max(20, windowSec * 0.25);
+  } else if (valid.length === 1) {
+    // one sample: keep the marker near the right edge behind a short stub
+    t0 = t1 - Math.min(windowSec, 10);
   } else {
-    const firstT = valid[0].t;
-    const cover = t1 - firstT;
+    const cover = t1 - valid[0].t;
     if (cover < windowSec) {
-      // history cache still warming up: stretch the observed span to full width,
-      // but never pretend it is the full 8 minutes (the DOM label reports the span)
-      const display = clamp(cover, Math.max(20, windowSec * 0.06), windowSec);
-      t0 = t1 - display;
+      // The 8-minute cache is still warming up: stretch the observed span over
+      // the whole plot so the trend is readable immediately. The DOM label next
+      // to the section title always reports the true cache span.
+      t0 = t1 - Math.min(windowSec, Math.max(cover * 1.1, 10));
     }
   }
   const spanT = Math.max(1e-3, t1 - t0);
@@ -515,8 +507,8 @@ export function drawAreaLine(canvas, opts = {}) {
 
   const lastV = valid.length ? valid[valid.length - 1].v : null;
 
-  // faint reference while the 8-min cache is still filling
-  if (lastV != null && (valid.length < 2 || t1 - valid[0].t < windowSec * 0.6)) {
+  // a single sample has no line yet: show a faint reference rule at its value
+  if (lastV != null && valid.length < 2) {
     ctx.strokeStyle = color;
     ctx.globalAlpha = 0.2;
     ctx.lineWidth = 1;
@@ -558,7 +550,7 @@ export function drawAreaLine(canvas, opts = {}) {
 
   // current sample marker
   if (lastV != null) {
-    const px = xFor(valid[valid.length - 1].t);
+    const px = clamp(xFor(valid[valid.length - 1].t), padL + 2, padL + plotW - 2);
     const py = yFor(lastV);
     ctx.fillStyle = color;
     ctx.shadowColor = color;

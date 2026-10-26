@@ -84,9 +84,9 @@
 .left-mission-area-en {
   overflow: hidden;
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
   font-style: normal;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--gcs-text-4);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -121,16 +121,26 @@
 }
 
 .left-phase-seg.is-done {
-  background-color: rgba(95, 243, 228, 0.36);
+  background-color: rgba(95, 243, 228, 0.2);
 }
 
 .left-phase-seg.is-current {
   background-image: linear-gradient(
     90deg,
     var(--gcs-accent) 0 calc(var(--left-phase-fill, 1) * 100%),
-    rgba(140, 224, 238, 0.16) calc(var(--left-phase-fill, 1) * 100%) 100%
+    rgba(140, 224, 238, 0.1) calc(var(--left-phase-fill, 1) * 100%) 100%
   );
-  box-shadow: 0 0 8px rgba(95, 243, 228, 0.38);
+  box-shadow: 0 0 8px rgba(95, 243, 228, 0.42);
+  animation: left-phase-current 2.2s var(--gcs-ease) infinite alternate;
+}
+
+@keyframes left-phase-current {
+  from {
+    box-shadow: 0 0 5px rgba(95, 243, 228, 0.26);
+  }
+  to {
+    box-shadow: 0 0 11px rgba(95, 243, 228, 0.62);
+  }
 }
 
 .left-phase-label {
@@ -177,9 +187,9 @@
 .left-metric-k {
   flex: 0 0 auto;
   font-family: var(--gcs-font-en);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: var(--gcs-text-4);
   text-transform: uppercase;
 }
@@ -246,9 +256,37 @@
   color: var(--gcs-text-2);
 }
 
-.left-meta-avg,
-.left-meta-alerts {
+.left-meta-avg {
   color: var(--gcs-text-3);
+}
+
+.left-meta-alerts {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gcs-text-3);
+}
+
+.left-meta-alert-dot {
+  flex: 0 0 auto;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.3;
+  transition: opacity var(--gcs-fast) var(--gcs-ease);
+}
+
+.left-meta-alerts .left-meta-alert-dot.is-on {
+  opacity: 1;
+}
+
+.left-meta-alerts.gcs-txt--warn .left-meta-alert-dot {
+  box-shadow: 0 0 0 2px rgba(255, 178, 87, 0.14);
+}
+
+.left-meta-alerts.gcs-txt--danger .left-meta-alert-dot {
+  box-shadow: 0 0 0 2px rgba(255, 93, 74, 0.16);
 }
 
 .left-roster {
@@ -312,7 +350,7 @@
 /* --- roster row: one 26px grid line per vessel ---------------------------- */
 .gcs-row.left-row {
   display: grid;
-  grid-template-columns: 6px 38px minmax(0, 1fr) 32px 30px 24px 36px 5px;
+  grid-template-columns: 6px 38px minmax(0, 1fr) 37px 30px 24px 36px 5px;
   column-gap: 4px;
   align-items: center;
   height: 26px;
@@ -358,7 +396,7 @@
   overflow: hidden;
   font-family: var(--gcs-font-en);
   font-size: 8px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--gcs-text-4);
   text-overflow: ellipsis;
   text-transform: uppercase;

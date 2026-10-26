@@ -1,0 +1,561 @@
+/* =============================================================================
+   OceanSwarm GCS — two-dimensional tactical chart
+   Owner: ui-map · visual spec: docs/GCS-design-system.md §7.6
+   -----------------------------------------------------------------------------
+   Scope: .map-* only. The chart canvas fills #gcs-map; DOM chrome floats above
+   it (title, zoom/scale instrument, layer chips, tool bar, cursor readout).
+   ============================================================================= */
+
+/* =============================================================================
+   0. Shell
+   ============================================================================= */
+.map-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-family: var(--gcs-font-cn);
+  color: var(--gcs-text);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+}
+
+.map-chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* glass plate shared by the chart instruments */
+.map-plate {
+  position: relative;
+  padding: 8px 10px;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.58);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+}
+
+.map-plate::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 8px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) left top / 1px 8px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 8px 1px no-repeat,
+    linear-gradient(var(--gcs-accent-line), var(--gcs-accent-line)) right bottom / 1px 8px no-repeat;
+  opacity: 0.6;
+}
+
+.map-plate,
+.map-toolbar {
+  pointer-events: auto;
+}
+
+/* =============================================================================
+   1. Chart title
+   ============================================================================= */
+.map-title {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: 26px;
+  padding: 0 13px;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.62);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.map-title::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gcs-accent), rgba(95, 243, 228, 0));
+  opacity: 0.55;
+}
+
+.map-title-cn {
+  font-family: var(--gcs-font-cn);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--gcs-text);
+}
+
+.map-title-en {
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gcs-accent-2);
+  opacity: 0.75;
+}
+
+.map-title-sep {
+  width: 1px;
+  height: 11px;
+  background: var(--gcs-line-strong);
+  align-self: center;
+}
+
+.map-title-area {
+  font-family: var(--gcs-font-cn);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-2);
+}
+
+.map-title-meta {
+  font-family: var(--gcs-font-mono);
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-3);
+}
+
+/* =============================================================================
+   2. Tool hint (goto / measure)
+   ============================================================================= */
+.map-hint {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 22px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--gcs-accent-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.72);
+  color: var(--gcs-accent);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px rgba(95, 243, 228, 0.06), 0 8px 20px rgba(0, 0, 0, 0.3);
+  transition:
+    opacity var(--gcs-normal) var(--gcs-ease),
+    transform var(--gcs-normal) var(--gcs-ease);
+  pointer-events: none;
+}
+
+.map-hint--hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* =============================================================================
+   3. Zoom + scale instrument (top right)
+   ============================================================================= */
+.map-instrument {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 172px;
+  padding: 8px 9px 7px;
+}
+
+.map-zoomrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.map-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gcs-radius-s);
+  background: transparent;
+  color: var(--gcs-text-2);
+  font-family: var(--gcs-font-cn);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.map-btn:hover {
+  color: var(--gcs-text);
+  background-color: rgba(140, 224, 238, 0.08);
+}
+
+.map-btn:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+.map-btn--icon {
+  width: 21px;
+  height: 21px;
+  border: 1px solid var(--gcs-line);
+  background-color: rgba(2, 12, 18, 0.35);
+  color: var(--gcs-text-2);
+}
+
+.map-btn--icon:hover {
+  border-color: var(--gcs-accent-line);
+  color: var(--gcs-accent);
+  background-color: var(--gcs-accent-soft);
+}
+
+.map-btn--icon .gcs-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.map-zoom-val {
+  flex: 1 1 auto;
+  height: 21px;
+  border: 1px solid var(--gcs-accent-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(95, 243, 228, 0.07);
+  color: var(--gcs-accent);
+  font-family: var(--gcs-font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.map-zoom-val:hover {
+  background-color: rgba(95, 243, 228, 0.14);
+}
+
+.map-scalebar {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.map-scalebar-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 7px;
+  min-width: 40px;
+}
+
+.map-scalebar-fill {
+  display: block;
+  width: 80px;
+  height: 7px;
+  border-left: 1px solid var(--gcs-accent-line);
+  border-right: 1px solid var(--gcs-accent-line);
+  border-bottom: 1px solid rgba(159, 214, 232, 0.75);
+  transition: width var(--gcs-fast) var(--gcs-ease);
+}
+
+.map-scalebar-fill::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1px;
+  height: 3px;
+  background: rgba(159, 214, 232, 0.55);
+}
+
+.map-scalebar-label {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+  padding-bottom: 0;
+}
+
+.map-instrument-meta {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--gcs-line-faint);
+  text-align: right;
+  font-family: var(--gcs-font-mono);
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =============================================================================
+   4. Layer chips (bottom right)
+   ============================================================================= */
+.map-layers {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  padding: 7px 9px 8px;
+}
+
+.map-plate-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--gcs-line-faint);
+  font-family: var(--gcs-font-cn);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-2);
+}
+
+.map-plate-en {
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gcs-text-4);
+}
+
+.map-layers-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, auto));
+  gap: 4px;
+}
+
+.map-chip {
+  appearance: none;
+  margin: 0;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.4);
+  color: var(--gcs-text-3);
+  font-family: var(--gcs-font-cn);
+  font-size: 9.5px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.map-chip:hover {
+  color: var(--gcs-text);
+  border-color: var(--gcs-line-strong);
+  background-color: rgba(140, 224, 238, 0.08);
+}
+
+.map-chip.is-active {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-accent-line);
+  background-color: rgba(95, 243, 228, 0.12);
+}
+
+.map-chip:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+/* =============================================================================
+   5. Tool bar (bottom centre)
+   ============================================================================= */
+.map-toolbar {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 6px;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background-color: rgba(2, 12, 18, 0.62);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--gcs-inner-highlight);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+}
+
+.map-tool {
+  height: 26px;
+  padding: 0 9px;
+  gap: 5px;
+  border: 1px solid transparent;
+  color: var(--gcs-text-2);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.map-tool .gcs-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.8;
+}
+
+.map-tool:hover {
+  color: var(--gcs-text);
+}
+
+.map-tool.is-active {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-accent-line);
+  background-color: rgba(95, 243, 228, 0.13);
+  box-shadow: inset 0 -1px 0 rgba(95, 243, 228, 0.55);
+}
+
+.map-tool.is-active .gcs-icon {
+  opacity: 1;
+}
+
+.map-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--gcs-line);
+}
+
+/* =============================================================================
+   6. Cursor readout (bottom left)
+   ============================================================================= */
+.map-cursor {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 7px 10px;
+  min-width: 178px;
+  pointer-events: none;
+}
+
+.map-cursor-line {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.map-cursor-line--sub {
+  margin-top: 3px;
+  font-size: 8.5px;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-3);
+}
+
+.map-cursor-sep {
+  display: none;
+}
+
+.map-cursor-en {
+  color: var(--gcs-text-2);
+}
+
+/* =============================================================================
+   7. Chart state hooks
+   ============================================================================= */
+body.gcs-clean .map-chrome {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--gcs-normal) var(--gcs-ease);
+}
+
+body[data-gcs-view="3d"] .map-chrome {
+  /* chart chrome must never paint over the 3D situation view */
+  visibility: hidden;
+}
+
+/* =============================================================================
+   8. Responsive
+   ============================================================================= */
+@media (max-width: 1500px) {
+  .map-instrument {
+    width: 158px;
+  }
+
+  .map-title-area {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .map-instrument {
+    width: 146px;
+  }
+
+  .map-tool {
+    padding: 0 7px;
+    font-size: 10.5px;
+  }
+
+  .map-layers-grid {
+    grid-template-columns: repeat(3, minmax(0, auto));
+  }
+
+  .map-title-en {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-hint,
+  .map-scalebar-fill,
+  .map-chip,
+  .map-btn,
+  .map-tool,
+  .map-zoom-val {
+    transition: none;
+  }
+}

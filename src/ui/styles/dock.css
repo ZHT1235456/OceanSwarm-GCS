@@ -1,0 +1,874 @@
+/* =============================================================================
+   DOCK — event stream + command console (§7.4)
+   Module owner: ui-dock. Only .dock-* selectors + published .gcs-* classes.
+   ============================================================================= */
+
+/* the two plates share the 196 px dock row */
+.dock-events,
+.dock-console {
+  min-width: 0;
+  min-height: 0;
+}
+
+.dock-events {
+  flex: 1.55 1 0;
+}
+
+.dock-console {
+  flex: 1 1 0;
+  --gcs-i: 1;
+}
+
+/* =============================================================================
+   1. EVENT STREAM — header
+   ============================================================================= */
+.dock-ev-head {
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.dock-ev-head .gcs-panel-title {
+  flex: 0 0 auto;
+}
+
+.dock-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-left: 2px;
+  overflow: hidden;
+}
+
+.dock-filter {
+  height: 18px;
+  padding: 0 6px;
+  flex: 0 0 auto;
+  border-color: var(--gcs-line-faint);
+  background: transparent;
+  color: var(--gcs-text-3);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.dock-filter:hover {
+  border-color: var(--gcs-line);
+  background: rgba(140, 224, 238, 0.05);
+  color: var(--gcs-text-2);
+}
+
+.dock-filter.is-active {
+  border-color: var(--gcs-accent-line);
+  background: var(--gcs-accent-soft);
+  color: var(--gcs-accent);
+}
+
+.dock-ev-counters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.dock-unread {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--gcs-accent-2);
+  white-space: nowrap;
+}
+
+.dock-unread b {
+  font-weight: 600;
+  color: var(--gcs-accent);
+}
+
+.dock-unread-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gcs-accent);
+  box-shadow: 0 0 6px rgba(95, 243, 228, 0.65);
+  animation: dock-unread-pulse 1.6s ease-in-out infinite;
+}
+
+.dock-unread[hidden],
+.dock-ackall[hidden],
+.dock-follow[hidden],
+.dock-ev-empty[hidden] {
+  display: none !important;
+}
+
+.dock-ackall.gcs-btn {
+  height: 20px;
+  padding: 0 7px;
+  gap: 4px;
+  color: var(--gcs-warn);
+  border-color: rgba(255, 178, 87, 0.32);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.dock-ackall.gcs-btn:hover {
+  color: var(--gcs-warn);
+  border-color: rgba(255, 178, 87, 0.55);
+  background: rgba(255, 178, 87, 0.08);
+}
+
+.dock-ackall b {
+  font-family: var(--gcs-font-mono);
+  font-weight: 600;
+}
+
+/* =============================================================================
+   2. EVENT STREAM — rows
+   ============================================================================= */
+.dock-ev-body {
+  position: relative;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.dock-ev-list {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 3px 0 5px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dock-ev {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0 10px 0 8px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: default;
+}
+
+.dock-ev.is-clickable {
+  cursor: pointer;
+}
+
+.dock-ev:hover {
+  background-color: var(--gcs-panel-hover);
+}
+
+.dock-ev--info {
+  --dock-sev: var(--gcs-accent-2);
+}
+
+.dock-ev--success {
+  --dock-sev: var(--gcs-ok);
+}
+
+.dock-ev--warning {
+  --dock-sev: var(--gcs-warn);
+  background-color: rgba(255, 178, 87, 0.025);
+}
+
+.dock-ev--critical {
+  --dock-sev: var(--gcs-danger);
+  background-color: rgba(255, 93, 74, 0.04);
+}
+
+.dock-ev--command {
+  --dock-sev: var(--gcs-command);
+}
+
+.dock-ev-time {
+  flex: 0 0 auto;
+  width: 47px;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.dock-ev-bar {
+  flex: 0 0 auto;
+  width: 2px;
+  height: 10px;
+  background: var(--dock-sev, var(--gcs-accent-2));
+  opacity: 0.9;
+}
+
+.dock-ev-source {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 46px;
+  max-width: 84px;
+  height: 14px;
+  padding: 0 4px;
+  overflow: hidden;
+  border: 1px solid var(--gcs-line-faint);
+  border-radius: 2px;
+  background: rgba(2, 11, 18, 0.2);
+  font-family: var(--gcs-font-mono);
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-ev-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-ev--warning .dock-ev-text {
+  color: rgba(255, 214, 178, 0.88);
+}
+
+.dock-ev--critical .dock-ev-text {
+  color: rgba(255, 186, 176, 0.94);
+}
+
+.dock-ev--success .dock-ev-text {
+  color: rgba(180, 240, 212, 0.84);
+}
+
+.dock-ev--command .dock-ev-text {
+  color: rgba(190, 226, 252, 0.86);
+}
+
+.dock-ev-meta {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+/* empty / loading state */
+.dock-ev-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  font-family: var(--gcs-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--gcs-text-4);
+}
+
+.dock-ev-empty-mark {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--gcs-line-strong);
+  transform: rotate(45deg);
+}
+
+/* scroll-up pause helper */
+.dock-follow {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--gcs-accent-line);
+  border-radius: 2px;
+  background: rgba(3, 13, 20, 0.9);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  color: var(--gcs-accent);
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: gcs-fade-in var(--gcs-normal) var(--gcs-ease) both;
+}
+
+.dock-follow:hover {
+  background: rgba(95, 243, 228, 0.12);
+}
+
+.dock-follow .gcs-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.dock-follow b {
+  font-weight: 600;
+}
+
+/* =============================================================================
+   3. COMMAND CONSOLE
+   ============================================================================= */
+.dock-con-head {
+  gap: 8px;
+}
+
+.dock-con-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.dock-con-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gcs-accent-2);
+  box-shadow: 0 0 6px rgba(159, 214, 232, 0.45);
+}
+
+.dock-con-state[data-state="pending"] {
+  color: var(--gcs-warn);
+}
+
+.dock-con-state[data-state="pending"] .dock-con-dot {
+  background: var(--gcs-warn);
+  box-shadow: 0 0 6px rgba(255, 178, 87, 0.6);
+  animation: dock-state-pulse 1s ease-in-out infinite;
+}
+
+.dock-con-state[data-state="ok"] {
+  color: var(--gcs-ok);
+}
+
+.dock-con-state[data-state="ok"] .dock-con-dot {
+  background: var(--gcs-ok);
+  box-shadow: 0 0 6px rgba(92, 232, 165, 0.55);
+}
+
+.dock-con-state[data-state="fail"] {
+  color: var(--gcs-danger);
+}
+
+.dock-con-state[data-state="fail"] .dock-con-dot {
+  background: var(--gcs-danger);
+  box-shadow: 0 0 6px rgba(255, 93, 74, 0.55);
+}
+
+.dock-con-state[data-state="stale"] {
+  color: var(--gcs-warn);
+}
+
+.dock-con-state[data-state="stale"] .dock-con-dot {
+  background: var(--gcs-warn);
+}
+
+.dock-con-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 10px 8px;
+  overflow: hidden;
+}
+
+/* --- last acknowledgement -------------------------------------------------- */
+.dock-ack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--gcs-line-faint);
+  border-radius: 2px;
+  background: rgba(2, 11, 18, 0.26);
+  transition:
+    border-color var(--gcs-normal) var(--gcs-ease),
+    background-color var(--gcs-normal) var(--gcs-ease);
+}
+
+.dock-ack-badge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--gcs-line);
+  border-radius: 2px;
+  background: rgba(140, 224, 238, 0.05);
+  color: var(--gcs-text-3);
+  font-family: var(--gcs-font-mono);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.dock-ack-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dock-ack-text {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-ack-sub {
+  overflow: hidden;
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-ack-lat {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  color: var(--gcs-text-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dock-ack.is-empty {
+  opacity: 0.85;
+}
+
+.dock-ack.is-ok {
+  border-color: rgba(92, 232, 165, 0.24);
+  background: rgba(92, 232, 165, 0.05);
+}
+
+.dock-ack.is-ok .dock-ack-badge {
+  border-color: rgba(92, 232, 165, 0.36);
+  color: var(--gcs-ok);
+}
+
+.dock-ack.is-ok .dock-ack-text {
+  color: var(--gcs-ok);
+}
+
+.dock-ack.is-fail {
+  border-color: rgba(255, 93, 74, 0.34);
+  background: rgba(255, 93, 74, 0.06);
+}
+
+.dock-ack.is-fail .dock-ack-badge {
+  border-color: rgba(255, 93, 74, 0.42);
+  color: var(--gcs-danger);
+}
+
+.dock-ack.is-fail .dock-ack-text {
+  color: var(--gcs-danger);
+}
+
+.dock-ack.is-pending {
+  border-color: rgba(95, 243, 228, 0.24);
+}
+
+.dock-ack.is-pending .dock-ack-badge {
+  border-color: var(--gcs-accent-line);
+  color: var(--gcs-accent);
+}
+
+.dock-ack.is-pending .dock-ack-text {
+  color: var(--gcs-accent-2);
+}
+
+.dock-ack.is-stale .dock-ack-badge {
+  border-color: rgba(255, 178, 87, 0.4);
+  color: var(--gcs-warn);
+}
+
+.dock-ack.is-stale .dock-ack-text {
+  color: var(--gcs-warn);
+}
+
+.dock-ack-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-ack-icon .gcs-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dock-ack-spin {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--gcs-accent-line);
+  border-top-color: var(--gcs-accent);
+  border-radius: 50%;
+  animation: dock-spin 0.7s linear infinite;
+}
+
+/* --- input row ------------------------------------------------------------- */
+.dock-input-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.dock-prompt {
+  flex: 0 0 auto;
+  width: 12px;
+  color: var(--gcs-accent);
+  font-family: var(--gcs-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(95, 243, 228, 0.45);
+}
+
+.dock-input-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dock-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--gcs-line);
+  border-radius: 2px;
+  outline: none;
+  background: rgba(2, 11, 18, 0.42);
+  color: var(--gcs-text);
+  font-family: var(--gcs-font-mono);
+  font-size: 11.5px;
+  line-height: 28px;
+  letter-spacing: 0.01em;
+  caret-color: var(--gcs-accent);
+  transition:
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease),
+    box-shadow var(--gcs-fast) var(--gcs-ease);
+}
+
+.dock-input::placeholder {
+  color: var(--gcs-text-4);
+  font-family: var(--gcs-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+}
+
+.dock-input:hover {
+  border-color: var(--gcs-line-strong);
+}
+
+.dock-input:focus {
+  border-color: var(--gcs-accent-line);
+  background: rgba(2, 11, 18, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(95, 243, 228, 0.08),
+    inset 0 0 12px rgba(95, 243, 228, 0.04);
+}
+
+.dock-input.is-error {
+  border-color: rgba(255, 93, 74, 0.62);
+  box-shadow: inset 0 0 12px rgba(255, 93, 74, 0.07);
+}
+
+.dock-send.gcs-btn {
+  width: 28px;
+  height: 28px;
+  color: var(--gcs-text-3);
+  border-color: var(--gcs-line-faint);
+}
+
+.dock-send.gcs-btn:hover {
+  color: var(--gcs-accent);
+  border-color: var(--gcs-accent-line);
+  background: var(--gcs-accent-soft);
+}
+
+.dock-send .gcs-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* --- feedback line --------------------------------------------------------- */
+.dock-con-msg {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 14px;
+}
+
+.dock-con-msg[hidden] {
+  display: none !important;
+}
+
+.dock-msg-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-con-msg[data-kind="error"] .dock-msg-text {
+  color: var(--gcs-danger);
+}
+
+.dock-con-msg[data-kind="hint"] .dock-msg-text {
+  color: var(--gcs-accent-2);
+}
+
+.dock-msg-hint {
+  flex: 0 0 auto;
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1.3;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+/* --- suggestion chips ------------------------------------------------------ */
+.dock-suggest {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dock-suggest-label {
+  flex: 0 0 auto;
+  margin-right: 2px;
+  font-family: var(--gcs-font-cn);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--gcs-text-4);
+}
+
+.dock-suggest-chip {
+  flex: 0 0 auto;
+  height: 18px;
+  padding: 0 6px;
+  border-color: var(--gcs-line-faint);
+  color: var(--gcs-text-3);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.dock-suggest-chip:hover {
+  border-color: var(--gcs-accent-line);
+  background: var(--gcs-accent-soft);
+  color: var(--gcs-accent);
+}
+
+/* =============================================================================
+   4. PANEL FEEDBACK ANIMATIONS
+   ============================================================================= */
+.dock-events.is-focus {
+  animation: dock-panel-focus 900ms var(--gcs-ease) 1;
+}
+
+.dock-console.is-acked {
+  animation: dock-ack-flash 460ms var(--gcs-ease) 1;
+}
+
+.dock-console.is-denied {
+  animation: dock-deny-flash 460ms var(--gcs-ease) 1;
+}
+
+@keyframes dock-panel-focus {
+  0% {
+    box-shadow:
+      inset 0 0 0 1px rgba(95, 243, 228, 0.4),
+      0 0 26px rgba(95, 243, 228, 0.12);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(95, 243, 228, 0),
+      0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes dock-ack-flash {
+  0% {
+    box-shadow:
+      inset 0 0 0 1px rgba(92, 232, 165, 0.4),
+      0 0 26px rgba(92, 232, 165, 0.1);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(92, 232, 165, 0),
+      0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes dock-deny-flash {
+  0% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 93, 74, 0.45),
+      0 0 26px rgba(255, 93, 74, 0.12);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 93, 74, 0),
+      0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes dock-unread-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes dock-state-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes dock-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =============================================================================
+   5. RESPONSIVE
+   ============================================================================= */
+@media (max-width: 1520px) {
+  .dock-ev-head .gcs-panel-index,
+  .dock-con-head .gcs-panel-index {
+    display: none;
+  }
+
+  .dock-ev-head {
+    gap: 6px;
+  }
+
+  .dock-filter {
+    padding: 0 5px;
+  }
+}
+
+@media (max-width: 1360px) {
+  .dock-unread span {
+    display: none;
+  }
+
+  .dock-suggest-label {
+    display: none;
+  }
+}
+
+@media (max-height: 840px) {
+  .dock-con-body {
+    gap: 5px;
+    padding: 6px 10px;
+  }
+
+  .dock-ack {
+    min-height: 30px;
+  }
+
+  .dock-input {
+    height: 26px;
+    line-height: 26px;
+  }
+
+  .dock-send.gcs-btn {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-unread-dot,
+  .dock-con-state .dock-con-dot,
+  .dock-ack-spin {
+    animation: none !important;
+  }
+
+  .dock-events.is-focus,
+  .dock-console.is-acked,
+  .dock-console.is-denied,
+  .dock-follow {
+    animation: none !important;
+  }
+
+  .dock-filter,
+  .dock-suggest-chip,
+  .dock-input,
+  .dock-ack {
+    transition: none;
+  }
+}

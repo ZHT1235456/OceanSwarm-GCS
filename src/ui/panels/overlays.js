@@ -80,6 +80,8 @@ export function createOverlaysPanel(ctx) {
   let bootState = null;
   let bootLogEls = [];
   let bootStart = 0;
+  let bootStarted = false;
+  let bootStartTimer = 0;
   let bootRaf = 0;
   let bootFallbackTimer = 0;
   let bootDone = false;
@@ -122,7 +124,7 @@ export function createOverlaysPanel(ctx) {
         `<li class="ovl-boot-log"><i class="ovl-boot-log-mark"></i><span class="ovl-boot-log-text">${esc(line.text)}</span></li>`,
     ).join('');
     bootEl = h('div', {
-      class: 'ovl-boot',
+      class: 'ovl-boot is-pending',
       attrs: { role: 'status', 'aria-live': 'polite', 'aria-label': '系统启动' },
       on: { click: () => finishBoot(true) },
     });
@@ -165,7 +167,10 @@ export function createOverlaysPanel(ctx) {
   }
 
   function startBoot() {
-    if (!bootEl) return;
+    if (!bootEl || bootStarted || bootDone) return;
+    bootStarted = true;
+    clearTimeout(bootStartTimer);
+    bootEl.classList.remove('is-pending');
     if (ctx.state.skipIntro || reducedMotion()) {
       finishBoot(true);
       return;
@@ -199,8 +204,10 @@ export function createOverlaysPanel(ctx) {
   function finishBoot(instant) {
     if (bootDone) return;
     bootDone = true;
+    bootStarted = true;
     cancelAnimationFrame(bootRaf);
     clearTimeout(bootFallbackTimer);
+    clearTimeout(bootStartTimer);
     notifyBooted();
     const el = bootEl;
     bootEl = null;
@@ -452,7 +459,7 @@ export function createOverlaysPanel(ctx) {
       'header',
       { class: 'ovl-help-head' },
       h('span', { class: 'ovl-help-index', text: 'HELP' }),
-      h('h2', { class: 'ovl-help-title' }, '操作帮助 ', h('em', { text: 'KEYBOARD SHORTCUTS' })),
+      h('h2', { class: 'ovl-help-title' }, '操作帮助 ', h('em', { text: '快捷键 KEYBOARD SHORTCUTS' })),
       h('span', { class: 'ovl-help-version', text: `${app.name || 'OceanSwarm GCS'} v${app.version || '2.0.0'}` }),
       closeBtn,
     );
@@ -658,7 +665,9 @@ export function createOverlaysPanel(ctx) {
     mount(hostEl) {
       host = hostEl;
       bootDone = false;
+      bootStarted = false;
       bootNotified = false;
+      clearTimeout(bootStartTimer);
 
       toastStack = h('div', { class: 'ovl-toasts', attrs: { 'aria-live': 'polite' } });
       toastStack.style.pointerEvents = 'none';
@@ -691,11 +700,23 @@ export function createOverlaysPanel(ctx) {
       window.addEventListener('keydown', onKeyDownCapture, true);
       window.addEventListener('keyup', onKeyUpCapture, true);
 
-      startBoot();
+      if (ctx.state.skipIntro || reducedMotion()) {
+        startBoot();
+      } else {
+        // Wait for the first live snapshot: the pre-JS splash covers the scene
+        // build, then the boot sequence plays over the ready console. This also
+        // lets QA capture the animation mid-flight (?nointro skipped it).
+        bootStartTimer = setTimeout(startBoot, 12000);
+      }
     },
 
     update(snap) {
-      if (bootDone) watchSnapshotLocal(snap || ctx.getSnapshot?.());
+      const current = snap || ctx.getSnapshot?.();
+      if (!bootDone) {
+        if (current) startBoot();
+        return;
+      }
+      watchSnapshotLocal(current);
     },
 
     frame() {},
@@ -712,6 +733,7 @@ export function createOverlaysPanel(ctx) {
       window.removeEventListener('keyup', onKeyUpCapture, true);
       cancelAnimationFrame(bootRaf);
       clearTimeout(bootFallbackTimer);
+      clearTimeout(bootStartTimer);
       closeAll();
       if (bootEl) {
         bootEl.remove();

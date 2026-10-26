@@ -182,9 +182,9 @@ try {
 // -----------------------------------------------------------------------------
 const _v = new THREE.Vector3();
 // GCS framing: the swarm has to read well inside the centre viewport of the
-// operator console, so the default vantage is wider / higher than the original
-// cinematic default and intentionally leaves room for the command UI.
-const CONSOLE_VIEW = { back: 860, up: 180, right: 250, targetAhead: 60, targetHeight: 10 };
+// operator console — a slightly raised rear-quarter vantage that keeps the
+// golden-hour horizon in frame while the formation fills the observation window.
+const CONSOLE_VIEW = { back: 660, up: 210, right: 205, targetAhead: 80, targetHeight: 10 };
 function setCameraFromFleet() {
   const fwd = fleet.forward;
   const right = fleet.right;
@@ -359,11 +359,23 @@ const gcs = await createGcsConsole({
   getLiveVessels: bridge.getLiveVessels,
   getRenderStats: () => ({ ...stats }),
 });
-gcs.pause = () => bridge.scene3d.pause();
-gcs.resume = () => bridge.scene3d.resume();
-gcs.renderFrame = renderScene;
-gcs.bridge = bridge;
-gcs.swarm = swarm;
+// The console API exposed as window.__gcs is the UI root's inner object; enrich
+// it with the scene-side handles used by the QA harness.
+const gcsApi = gcs.gcs || gcs;
+gcsApi.pause = () => bridge.scene3d.pause();
+gcsApi.resume = () => bridge.scene3d.resume();
+gcsApi.renderFrame = renderScene;
+// QA-only full freeze: stops the render loop entirely so headless screenshots
+// stay cheap and perfectly reproducible (no RAF painting under SwiftShader).
+gcsApi.freeze = () => {
+  paused = true;
+};
+gcsApi.unfreeze = () => {
+  paused = false;
+  lastNow = performance.now();
+};
+gcsApi.bridge = bridge;
+gcsApi.swarm = swarm;
 
 // --- pointer picking: click a hull in the 3D view to select it ---------------
 const raycaster = new THREE.Raycaster();

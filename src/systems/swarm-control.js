@@ -52,7 +52,7 @@ const FORMATION_LAYOUT = {
   wedge(k) {
     const rank = Math.floor(k / 2) + 1;
     const side = k % 2 === 0 ? -1 : 1;
-    return { lat: side * rank * 64, fwd: -(rank - 1) * 60 };
+    return { lat: side * rank * 56, fwd: -rank * 52 };
   },
   // single file astern, slight lateral stagger for a natural wake lane
   column(k) {
@@ -62,7 +62,7 @@ const FORMATION_LAYOUT = {
   line(k) {
     const rank = Math.floor(k / 2) + 1;
     const side = k % 2 === 0 ? -1 : 1;
-    return { lat: side * rank * 62, fwd: 0 };
+    return { lat: side * rank * 56, fwd: 0 };
   },
   // concentric diamond lattice around the flagship
   diamond(k) {
@@ -71,7 +71,7 @@ const FORMATION_LAYOUT = {
   // close ring escort around the flagship
   ring(k) {
     const a = (k / 16) * TWO_PI;
-    return { lat: Math.cos(a) * 176, fwd: Math.sin(a) * 176 };
+    return { lat: Math.cos(a) * 168, fwd: Math.sin(a) * 168 };
   },
 };
 

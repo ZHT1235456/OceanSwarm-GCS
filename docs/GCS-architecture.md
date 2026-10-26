@@ -189,8 +189,8 @@ booted: false, acks: [] }`。模块可读 `ctx.state`，但修改必须通过 ac
 
 ### 4.3 snapshot（Sim 输出，10Hz）
 
-字段命名已冻结，Sim 必须逐字段提供；允许后续追加字段。详见 `src/sim/demo-stub.js`
-（Lead 先写的形状参考实现）与 `docs/GCS-design-system.md` 的文案约定。
+字段命名已冻结，Sim 必须逐字段提供；允许后续追加字段。详见 `src/ui/mock-sim.js`
+（Lead 的临时桩实现，形状参考）与 `docs/GCS-design-system.md` 的文案约定。
 
 ```js
 {

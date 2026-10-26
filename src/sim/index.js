@@ -214,7 +214,7 @@ export function createSim({ scene, meta, options } = {}) {
         pushAck({
           commandText: text,
           ok: false,
-          text: '指令被拒绝',
+          text: `指令被拒绝 · ${error}`,
           latencyMs: 0,
           detail: error,
         });
@@ -225,7 +225,9 @@ export function createSim({ scene, meta, options } = {}) {
         pushAck({
           commandText: ticket.commandText,
           ok: result.ok,
-          text,
+          text: result.ok
+            ? `指令已执行 · 延时 ${(Math.max(0, latencyMs) / 1000).toFixed(2)} s`
+            : `指令被拒绝 · ${result.text || detail || '未知原因'}`,
           latencyMs,
           detail,
           ticket: ticket.id,
@@ -377,7 +379,7 @@ export function createSim({ scene, meta, options } = {}) {
         bandwidthMbps: round1(bandwidthMbps),
         gnssSats: offlineCount > 2 ? 11 : 12,
         gnssFix: 'RTK',
-        relayId: domain.relayId,
+        relayId: domain.relayCallSign || domain.relayId,
       },
       sea: {
         state: sea.state,
@@ -397,7 +399,8 @@ export function createSim({ scene, meta, options } = {}) {
         en: mission.en,
         area: mission.area,
         phaseIndex: mission.phaseIndex,
-        phaseNo: mission.phaseIndex + 1,
+        phaseNo: mission.phaseNo,
+        phaseIndex0: mission.phaseIndex0,
         phaseCount: mission.phaseCount,
         phaseName: mission.phaseName,
         phaseEn: mission.phaseEn,
@@ -406,7 +409,8 @@ export function createSim({ scene, meta, options } = {}) {
         overallProgress: round3(mission.overallProgress),
         overallPct: Math.round(mission.overallProgress * 100),
         waypointIndex: mission.waypointIndex,
-        waypointNo: mission.waypointIndex + 1,
+        waypointNo: mission.waypointNo,
+        waypointIndex0: mission.waypointIndex0,
         waypointTotal: mission.waypointTotal,
         waypointId: mission.waypointId,
         waypointName: mission.waypointName,
@@ -537,8 +541,9 @@ export function createSim({ scene, meta, options } = {}) {
     const fleet = model.getFleet();
     const formation = domain.formationByKey.get(fleet.formationKey) || { name: '楔形' };
     const mission = domain.mission;
-    const phase = mission.phases[model.getMission().phaseIndex] || mission.phases[0];
-    const waypoint = mission.waypoints[model.getMission().waypointIndex] || mission.waypoints[0];
+    const initialMission = model.getMission();
+    const phase = mission.phases[initialMission.phaseIndex0] || mission.phases[0];
+    const waypoint = mission.waypoints[initialMission.waypointIndex0] || mission.waypoints[0];
     const relay = domain.relayId ? domain.byId.get(domain.relayId) : null;
     addEvent({ met: met - 96, severity: 'info', category: 'system', sourceLabel: '系统', text: 'GCS 终端就绪 · 离线安全链路已建立' });
     addEvent({
@@ -562,7 +567,7 @@ export function createSim({ scene, meta, options } = {}) {
       severity: 'info',
       category: 'mission',
       sourceLabel: '任务',
-      text: `进入阶段 ${model.getMission().phaseIndex + 1}/${mission.phases.length} ${phase.name} · 航路点 ${waypoint ? waypoint.id : ''}`,
+      text: `进入阶段 ${initialMission.phaseIndex}/${mission.phases.length} ${phase.name} · 航路点 ${waypoint ? waypoint.id : ''}`,
     });
     addEvent({
       met: met - 12,
@@ -594,6 +599,11 @@ export function createSim({ scene, meta, options } = {}) {
     const sceneState = getSceneState();
     const paused = !!(sceneState && sceneState.paused);
     let needBuild = !state.snapshotCache || state.dirty;
+
+    // A command that just executed changed the scene truth. When the scene is
+    // paused the telemetry clock stays frozen, but control truth (fleet mode,
+    // e-stop, vessel modes/waypoints) must reach the next snapshot immediately.
+    if (executed > 0 && sceneState) model.syncControlState(sceneState);
 
     if (delta > 0 && !paused) {
       state.frames += 1;
@@ -635,6 +645,8 @@ export function createSim({ scene, meta, options } = {}) {
 
   // --- debug hooks ----------------------------------------------------------
   const debug = {
+    engine: 'src/sim',
+    kind: 'real-sim',
     seed,
     version: '2.0.0',
     state() {
@@ -860,12 +872,15 @@ export function validateSnapshot(snap, expected = {}) {
       for (const key of ['id', 'name', 'en', 'area', 'phaseName', 'phaseEn', 'waypointName']) {
         str(`fleet.mission.${key}`, fleet.mission[key]);
       }
-      int('fleet.mission.phaseIndex', fleet.mission.phaseIndex, { min: 0 });
+      // phaseIndex / waypointIndex are 1-based (UI contract, matches mock-sim)
+      int('fleet.mission.phaseIndex', fleet.mission.phaseIndex, { min: 1 });
       int('fleet.mission.phaseCount', fleet.mission.phaseCount, { min: 1 });
+      if (fleet.mission.phaseIndex > fleet.mission.phaseCount) fail('fleet.mission.phaseIndex', 'out of phase range');
       number('fleet.mission.phaseProgress', fleet.mission.phaseProgress, { min: 0, max: 1 });
       number('fleet.mission.overallProgress', fleet.mission.overallProgress, { min: 0, max: 1 });
-      int('fleet.mission.waypointIndex', fleet.mission.waypointIndex, { min: 0 });
+      int('fleet.mission.waypointIndex', fleet.mission.waypointIndex, { min: 1 });
       int('fleet.mission.waypointTotal', fleet.mission.waypointTotal, { min: 1 });
+      if (fleet.mission.waypointIndex > fleet.mission.waypointTotal) fail('fleet.mission.waypointIndex', 'out of waypoint range');
       number('fleet.mission.etaSec', fleet.mission.etaSec, { min: 0 });
     }
     if (fleet.rtl !== null) {

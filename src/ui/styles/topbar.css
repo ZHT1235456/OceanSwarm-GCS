@@ -1,0 +1,875 @@
+/* =============================================================================
+   TOPBAR — the 64 px instrument beam (§7.1)
+   Module owner: ui-dock. Only .topbar-* selectors + published .gcs-* classes.
+   ============================================================================= */
+
+.topbar {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background-color: var(--gcs-panel-strong);
+  background-image: var(--gcs-sheen);
+  border-bottom: 1px solid var(--gcs-line);
+  box-shadow:
+    inset 0 1px 0 var(--gcs-inner-highlight),
+    0 10px 28px rgba(0, 0, 0, 0.26);
+  -webkit-backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  backdrop-filter: blur(var(--gcs-blur)) saturate(var(--gcs-saturate));
+  animation: topbar-in 420ms var(--gcs-ease) both;
+}
+
+/* faint cool wash at both ends — reads as deck lighting, not decoration */
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(95, 243, 228, 0.045),
+    rgba(95, 243, 228, 0) 18%,
+    rgba(95, 243, 228, 0) 82%,
+    rgba(95, 243, 228, 0.035)
+  );
+}
+
+/* the deck lamp: one lit segment on the bottom rule, centred on the beam */
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 150px;
+  height: 1px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--gcs-accent-line), transparent);
+  opacity: 0.9;
+}
+
+.topbar-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.topbar-ic .gcs-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* =============================================================================
+   LEFT — brand + mission
+   ============================================================================= */
+.topbar-left {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 14px 0 16px;
+  box-shadow: inset -1px 0 0 var(--gcs-line-faint);
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.topbar-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid var(--gcs-line);
+  border-radius: var(--gcs-radius-s);
+  background: rgba(2, 11, 18, 0.32);
+  box-shadow: inset 0 1px 0 rgba(180, 244, 252, 0.06);
+  color: var(--gcs-accent);
+}
+
+.topbar-mark .gcs-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.topbar-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.topbar-name {
+  font-family: var(--gcs-font-en);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  color: var(--gcs-text);
+  white-space: nowrap;
+}
+
+.topbar-sub {
+  font-family: var(--gcs-font-cn);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.topbar-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 30px;
+  background: linear-gradient(180deg, transparent, var(--gcs-line-strong), transparent);
+}
+
+.topbar-sep--short {
+  height: 22px;
+}
+
+/* --- mission block --------------------------------------------------------- */
+.topbar-mission {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.topbar-mission-chip {
+  flex: 0 0 auto;
+  height: 20px;
+  padding: 0 7px;
+  letter-spacing: var(--gcs-track-en);
+}
+
+.topbar-mission-main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.topbar-mission-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.topbar-mission-name {
+  font-family: var(--gcs-font-cn);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text);
+}
+
+.topbar-mission-en {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--gcs-text-3);
+}
+
+.topbar-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.topbar-live-text {
+  font-family: var(--gcs-font-en);
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  color: var(--gcs-text-3);
+}
+
+.topbar-mission-meta {
+  gap: 7px;
+}
+
+.topbar-label {
+  font-family: var(--gcs-font-cn);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--gcs-text-4);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.topbar-phase-name {
+  font-family: var(--gcs-font-cn);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-2);
+  white-space: nowrap;
+}
+
+.topbar-phase-count {
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-text-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topbar-bar {
+  position: relative;
+  width: 96px;
+  height: 2px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: rgba(140, 224, 238, 0.12);
+}
+
+.topbar-bar-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(95, 243, 228, 0.45), var(--gcs-accent));
+  box-shadow: 0 0 8px rgba(95, 243, 228, 0.4);
+  transition: width 420ms var(--gcs-ease);
+}
+
+.topbar-phase-pct {
+  min-width: 26px;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gcs-accent-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* =============================================================================
+   CENTER — waypoint progress
+   ============================================================================= */
+.topbar-center {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 16px;
+}
+
+.topbar-route {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.topbar-route-dots {
+  display: flex;
+  align-items: center;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.topbar-wp {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-wp-node {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--gcs-line-strong);
+  border-radius: 50%;
+  background: var(--gcs-ink-950);
+  transition:
+    background-color var(--gcs-normal) var(--gcs-ease),
+    border-color var(--gcs-normal) var(--gcs-ease),
+    box-shadow var(--gcs-normal) var(--gcs-ease);
+}
+
+.topbar-wp-node.is-done {
+  border-color: rgba(95, 243, 228, 0.55);
+  background: rgba(95, 243, 228, 0.55);
+}
+
+.topbar-wp-node.is-current {
+  width: 9px;
+  height: 9px;
+  border-color: var(--gcs-accent);
+  background: var(--gcs-accent-soft);
+  box-shadow:
+    0 0 0 3px rgba(95, 243, 228, 0.1),
+    0 0 10px rgba(95, 243, 228, 0.45);
+  animation: topbar-wp-breathe 2.1s ease-in-out infinite;
+}
+
+.topbar-wp-node.is-todo {
+  border-color: rgba(140, 224, 238, 0.22);
+  background: transparent;
+}
+
+.topbar-wp-link {
+  display: block;
+  width: 16px;
+  height: 1px;
+  background: rgba(140, 224, 238, 0.14);
+  transition: background-color var(--gcs-slow) var(--gcs-ease);
+}
+
+.topbar-wp-link.is-done {
+  background: linear-gradient(90deg, rgba(95, 243, 228, 0.55), rgba(95, 243, 228, 0.2));
+}
+
+.topbar-route-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.topbar-route-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-family: var(--gcs-font-mono);
+  font-size: 11.5px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--gcs-text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topbar-route-wp {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gcs-accent);
+}
+
+.topbar-route-label {
+  color: var(--gcs-text-3);
+}
+
+.topbar-route-main b {
+  font-weight: 500;
+  color: var(--gcs-text);
+}
+
+.topbar-route-meta {
+  min-width: 0;
+  font-family: var(--gcs-font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.topbar-sep-text {
+  color: var(--gcs-text-4);
+}
+
+.topbar-route-sub {
+  color: var(--gcs-text-3);
+}
+
+/* =============================================================================
+   RIGHT — link / GNSS / sea / alarms / clock / operator
+   ============================================================================= */
+.topbar-right {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 0 12px 0 10px;
+  box-shadow: inset 1px 0 0 var(--gcs-line-faint);
+}
+
+.topbar-stats {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.topbar-stat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--gcs-line-faint);
+  border-radius: var(--gcs-radius-s);
+  background: rgba(2, 11, 18, 0.26);
+  box-shadow: inset 0 1px 0 rgba(180, 244, 252, 0.04);
+  transition:
+    border-color var(--gcs-normal) var(--gcs-ease),
+    background-color var(--gcs-normal) var(--gcs-ease);
+}
+
+.topbar-stat-ic {
+  color: var(--gcs-text-3);
+}
+
+.topbar-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.topbar-stat-k {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--gcs-font-cn);
+  font-size: 8.5px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.topbar-stat-k em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  color: var(--gcs-text-4);
+}
+
+.topbar-stat-v {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--gcs-font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topbar-stat-v b {
+  font-weight: 600;
+}
+
+.topbar-stat-unit {
+  font-style: normal;
+  color: var(--gcs-text-4);
+}
+
+.topbar-stat.is-warn {
+  border-color: rgba(255, 178, 87, 0.3);
+  background: rgba(255, 178, 87, 0.05);
+}
+
+.topbar-stat.is-warn .topbar-stat-ic {
+  color: rgba(255, 178, 87, 0.82);
+}
+
+.topbar-stat.is-warn .topbar-stat-v {
+  color: var(--gcs-warn);
+}
+
+/* --- alarm counter (interactive) ------------------------------------------ */
+.topbar-alarm {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--gcs-line-faint);
+  border-radius: var(--gcs-radius-s);
+  background: rgba(2, 11, 18, 0.26);
+  color: var(--gcs-text-3);
+  cursor: pointer;
+  transition:
+    color var(--gcs-fast) var(--gcs-ease),
+    border-color var(--gcs-fast) var(--gcs-ease),
+    background-color var(--gcs-fast) var(--gcs-ease);
+}
+
+.topbar-alarm:hover {
+  border-color: var(--gcs-line-strong);
+  background: var(--gcs-panel-hover);
+  color: var(--gcs-text-2);
+}
+
+.topbar-alarm:focus-visible {
+  outline: 1px solid var(--gcs-accent-line);
+  outline-offset: 1px;
+}
+
+.topbar-alarm-ic {
+  color: inherit;
+}
+
+.topbar-alarm-ic .gcs-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.topbar-alarm-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.topbar-alarm-count {
+  font-family: var(--gcs-font-en);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--gcs-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-alarm-label {
+  font-family: var(--gcs-font-cn);
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--gcs-text-4);
+}
+
+.topbar-alarm.is-warn {
+  border-color: rgba(255, 178, 87, 0.34);
+  background: rgba(255, 178, 87, 0.06);
+  color: var(--gcs-warn);
+}
+
+.topbar-alarm.is-warn .topbar-alarm-count {
+  color: var(--gcs-warn);
+}
+
+.topbar-alarm.is-warn .topbar-alarm-label {
+  color: rgba(255, 178, 87, 0.66);
+}
+
+.topbar-alarm.is-danger {
+  border-color: rgba(255, 93, 74, 0.46);
+  background: rgba(255, 93, 74, 0.08);
+  color: var(--gcs-danger);
+  animation: topbar-alarm-breathe 1.9s ease-in-out infinite;
+}
+
+.topbar-alarm.is-danger .topbar-alarm-count {
+  color: var(--gcs-danger);
+}
+
+.topbar-alarm.is-danger .topbar-alarm-label {
+  color: rgba(255, 93, 74, 0.7);
+}
+
+.topbar-alarm.is-idle {
+  color: var(--gcs-text-4);
+}
+
+.topbar-alarm.is-idle .topbar-alarm-count {
+  color: var(--gcs-text-3);
+}
+
+/* --- clock ----------------------------------------------------------------- */
+.topbar-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 98px;
+}
+
+.topbar-clock-time {
+  font-family: var(--gcs-font-en);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--gcs-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-clock-sub {
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+/* --- operator -------------------------------------------------------------- */
+.topbar-operator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-left: 9px;
+  border-left: 1px solid var(--gcs-line-faint);
+}
+
+.topbar-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 1px solid var(--gcs-accent-line);
+  border-radius: 50%;
+  background: rgba(95, 243, 228, 0.06);
+  box-shadow: 0 0 0 3px rgba(95, 243, 228, 0.05);
+  color: var(--gcs-accent);
+  font-family: var(--gcs-font-cn);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.topbar-operator-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.topbar-operator-k {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--gcs-font-cn);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--gcs-text-3);
+  white-space: nowrap;
+}
+
+.topbar-operator-k em {
+  font-style: normal;
+  font-family: var(--gcs-font-en);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  color: var(--gcs-text-4);
+}
+
+.topbar-operator-v {
+  font-family: var(--gcs-font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--gcs-text-4);
+  white-space: nowrap;
+}
+
+/* --- utility buttons ------------------------------------------------------- */
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  margin-left: 1px;
+}
+
+.topbar-tool.gcs-btn {
+  width: 26px;
+  height: 26px;
+  color: var(--gcs-text-3);
+}
+
+.topbar-tool.gcs-btn:hover {
+  color: var(--gcs-accent);
+}
+
+.topbar-tool .gcs-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* =============================================================================
+   KEYFRAMES
+   ============================================================================= */
+@keyframes topbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes topbar-wp-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(95, 243, 228, 0.1),
+      0 0 10px rgba(95, 243, 228, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(95, 243, 228, 0.16),
+      0 0 16px rgba(95, 243, 228, 0.7);
+  }
+}
+
+@keyframes topbar-alarm-breathe {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px rgba(255, 93, 74, 0.16);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(255, 93, 74, 0.42), 0 0 16px rgba(255, 93, 74, 0.14);
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE — keep the beam complete at 1600×900, then shed secondary chips
+   ============================================================================= */
+@media (max-width: 1520px) {
+  .topbar-mission-en {
+    display: none;
+  }
+}
+
+@media (max-width: 1500px) {
+  .topbar-stat--sea {
+    display: none;
+  }
+
+  .topbar-center {
+    padding: 0 12px;
+  }
+
+  .topbar-route {
+    gap: 11px;
+  }
+
+  .topbar-wp-link {
+    width: 13px;
+  }
+}
+
+@media (max-width: 1520px) {
+  .topbar-left {
+    gap: 10px;
+    padding-right: 12px;
+  }
+
+  .topbar-sub {
+    display: none;
+  }
+
+  .topbar-operator-body {
+    display: none;
+  }
+
+  .topbar-operator {
+    padding-left: 7px;
+  }
+
+  .topbar-clock {
+    min-width: 92px;
+  }
+}
+
+@media (max-width: 1400px) {
+  .topbar-route-dots {
+    display: none;
+  }
+
+  .topbar-phase-pct,
+  .topbar-bar {
+    display: none;
+  }
+
+  .topbar-stat--gnss .topbar-stat-k em {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .topbar-mission {
+    display: none;
+  }
+
+  .topbar-left .topbar-sep {
+    display: none;
+  }
+
+  .topbar-route-meta {
+    display: none;
+  }
+
+  .topbar-tools {
+    display: none;
+  }
+}
+
+@media (max-height: 800px) {
+  .topbar-stat,
+  .topbar-alarm {
+    height: 32px;
+  }
+
+  .topbar-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .topbar-mark .gcs-icon {
+    width: 23px;
+    height: 23px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar,
+  .topbar-wp-node.is-current,
+  .topbar-alarm.is-danger {
+    animation: none !important;
+  }
+
+  .topbar-bar-fill,
+  .topbar-wp-node,
+  .topbar-wp-link {
+    transition: none;
+  }
+}

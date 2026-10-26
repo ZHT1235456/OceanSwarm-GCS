@@ -39,7 +39,7 @@ function readPhase(meta, snap) {
   const mission = snap?.fleet?.mission || {};
   const phases = meta.MISSION?.phases || [];
   const fallback = {
-    index: isNum(mission.phaseIndex) ? mission.phaseIndex : null,
+    index: isNum(mission.phaseNo) ? mission.phaseNo : isNum(mission.phaseIndex) ? mission.phaseIndex : null,
     count: isNum(mission.phaseCount) ? mission.phaseCount : phases.length || null,
     name: mission.phaseName || DASH,
     en: mission.phaseEn || '',
@@ -78,10 +78,15 @@ function readRoute(meta, snap) {
   const mission = snap?.fleet?.mission || {};
   const wps = meta.MISSION?.waypoints || [];
   const count = wps.length || 6;
-  let index = isNum(mission.waypointIndex) ? Math.round(mission.waypointIndex) : null;
+  // sim exposes both a 0-based waypointIndex (contract) and a 1-based waypointNo;
+  // prefer the explicit 1-based field so the beam never shows an off-by-one.
+  let index = null;
+  if (isNum(mission.waypointNo)) index = Math.round(mission.waypointNo);
+  else if (isNum(mission.waypointIndex)) index = Math.round(mission.waypointIndex) + 1;
   if (isNum(index)) index = Math.max(1, Math.min(count, index));
   const wp = index ? wps[index - 1] : null;
-  let overall = progressPct(mission.overallProgress);
+  let overall = progressPct(mission.overallPct);
+  if (overall == null) overall = progressPct(mission.overallProgress);
   if (overall == null && index) overall = ((index - 1) / count) * 100;
   return {
     index,
@@ -393,12 +398,6 @@ export function createTopbarPanel(ctx) {
       : '当前无活动告警 · 点击筛选告警事件';
   }
 
-  function clockText(snap) {
-    if (snap && typeof snap.clockText === 'string' && snap.clockText) return snap.clockText;
-    const ts = snap && isNum(snap.t) ? snap.t * 1000 : Date.now();
-    return ctx.format.clock(ts) || DASH;
-  }
-
   function update(snap) {
     if (!root) return;
     lastSnap = snap || lastSnap;
@@ -420,10 +419,10 @@ export function createTopbarPanel(ctx) {
       host = hostEl;
       build();
       host.appendChild(root);
-      update(ctx.getSnapshot ? ctx.getSnapshot() : null);
       // first paint fallback so the beam is never empty before the first snapshot
       setText(refs.clock, ctx.format.clock(Date.now()));
       setText(refs.date, ctx.format.date(Date.now()));
+      update(ctx.getSnapshot ? ctx.getSnapshot() : null);
     },
     update,
     frame() {},

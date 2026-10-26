@@ -354,7 +354,7 @@ export function createDetailPanel(ctx) {
             </header>
             <div class="detail-actions" data-ref="actions"></div>
             <button type="button" class="gcs-btn gcs-btn--danger detail-recover" data-ref="recover" hidden>
-              ${icons.icon('unlock', 13)}<span>解除接管</span><em class="detail-recover-en">TAKE OVER</em>
+              ${icons.icon('unlock', 13)}<span>解除接管</span><em class="detail-recover-en">RELEASE</em>
             </button>
           </section>
 
@@ -580,7 +580,10 @@ export function createDetailPanel(ctx) {
     refs.statusDot.className =
       `gcs-dot gcs-dot--${status.tone}` +
       (statusKey === 'normal' ? ' is-live' : statusKey === 'warning' ? ' is-pulse' : '');
-    setText(refs.statusText, `${status.text} · ${modeText}`);
+    // Status line: status + mode, without repeating the same word for an
+    // offline boat (statusText and modeText are both 离线 there).
+    const statusLine = modeText && modeText !== status.text ? `${status.text} · ${modeText}` : status.text;
+    setText(refs.statusText, statusLine);
     setText(refs.headMeta, `${callSign} · ${status.text}`);
     setClass(refs.lockBtn, 'is-active', ctx.state.cameraMode === 'lock');
 
@@ -621,7 +624,7 @@ export function createDetailPanel(ctx) {
     setText(refs.linkChip, link.type ? String(link.type).toUpperCase() : '—');
     const linkTone = quality == null ? '' : quality < 0.2 ? ' gcs-chip--danger' : quality < 0.34 ? ' gcs-chip--warn' : quality >= 0.6 ? ' gcs-chip--ok' : '';
     refs.linkChip.className = `gcs-chip detail-link-chip${linkTone}`;
-    setText(refs.linkMeta, quality == null ? '—' : `信号 ${Math.round(quality * 100)} %`);
+    setText(refs.linkMeta, quality == null ? '—' : `信号 ${Math.round(quality * 100)}%`);
 
     // --- 5. energy -----------------------------------------------------------
     setText(refs.voltage, fmt.volt(vessel.voltageV));
@@ -634,7 +637,9 @@ export function createDetailPanel(ctx) {
 
     // --- 7. commands ---------------------------------------------------------
     setText(refs.commandsMeta, modeText);
-    const takenOver = vessel.mode === 'auto' || vessel.mode === 'manual';
+    // §7.5: the danger “解除接管” release is shown whenever the boat is under a
+    // per-vessel command (single-vessel takeover) instead of formation control.
+    const takenOver = ['auto', 'manual', 'hold', 'rtl'].includes(vessel.mode);
     refs.recover.hidden = !takenOver;
 
     // --- 8. raw parameters ---------------------------------------------------

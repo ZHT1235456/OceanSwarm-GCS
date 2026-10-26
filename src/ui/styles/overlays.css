@@ -60,6 +60,12 @@
     transform 460ms var(--gcs-ease);
 }
 
+.ovl-boot.is-pending {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .ovl-boot.is-out {
   opacity: 0;
   transform: translateY(-22px);

@@ -199,7 +199,7 @@ export function createHudPanel(ctx) {
       viewSeg.appendChild(btn);
     }
 
-    const presets = h('div', { class: 'hud-presets hud-interactive' });
+    const presets = h('div', { class: 'hud-presets hud-interactive hud-3d-only' });
     for (const preset of Q.CAMERA_PRESETS || CAMERA_PRESETS) {
       const btn = h('button', {
         class: 'hud-preset',
@@ -235,7 +235,7 @@ export function createHudPanel(ctx) {
     camChip.append(h('span', { class: 'gcs-dot hud-camdot' }));
     camChip.append(h('span', { class: 'hud-camtext' }));
     camChip.append(h('span', { class: 'hud-camcyc', html: icons.icon('swap', 10) }));
-    const camRow = h('div', { class: 'hud-camrow' }, camChip);
+    const camRow = h('div', { class: 'hud-camrow hud-3d-only' }, camChip);
 
     const wrap = h('div', { class: 'hud-topleft' }, viewSeg, presets, camRow);
     els.viewSeg = viewSeg;

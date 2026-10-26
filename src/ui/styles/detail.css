@@ -24,7 +24,7 @@
    ============================================================================= */
 .detail-body {
   gap: 0;
-  padding: 11px 12px 14px 13px;
+  padding: 9px 12px 12px 13px;
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -100,7 +100,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 1px 0 10px;
+  padding: 1px 0 8px;
   min-width: 0;
 }
 
@@ -189,7 +189,8 @@
   flex: 0 0 auto;
   align-self: flex-start;
   margin-top: 1px;
-  color: var(--gcs-text-3);
+  color: var(--gcs-text-2);
+  border-color: var(--gcs-line-strong);
 }
 
 .detail-lock.is-active {
@@ -206,7 +207,7 @@
   grid-template-columns: 1.1fr 0.9fr 62px;
   align-items: end;
   gap: 4px 10px;
-  padding: 5px 0 7px;
+  padding: 3px 0 5px;
   min-width: 0;
 }
 
@@ -223,7 +224,7 @@
 }
 
 .detail-hero-cell--ring {
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .detail-hero-label {
@@ -280,6 +281,7 @@
   width: 52px;
   height: 52px;
   margin-top: 1px;
+  margin-left: auto;
 }
 
 /* =============================================================================
@@ -288,7 +290,7 @@
 .detail-substats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 7px 0 8px;
+  padding: 5px 0 6px;
   border-top: 1px solid var(--gcs-line-faint);
   border-bottom: 1px solid var(--gcs-line-faint);
   min-width: 0;
@@ -345,14 +347,14 @@
    ============================================================================= */
 .detail-sec {
   border-top: 1px solid var(--gcs-line-faint);
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 7px;
+  padding-top: 6px;
   min-width: 0;
 }
 
 .detail-sec:first-of-type {
   border-top: 0;
-  margin-top: 9px;
+  margin-top: 6px;
   padding-top: 0;
 }
 
@@ -360,7 +362,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
   min-width: 0;
 }
 
@@ -427,7 +429,7 @@
   display: block;
   flex: 0 0 auto;
   width: 132px;
-  height: 66px;
+  height: 64px;
   border-radius: var(--gcs-radius-s);
   background: var(--gcs-ink-1000);
 }
@@ -528,7 +530,7 @@
 .detail-kv-grid--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 /* =============================================================================
@@ -537,7 +539,7 @@
 .detail-energy {
   display: block;
   width: 100%;
-  height: 46px;
+  height: 44px;
   margin-top: 1px;
 }
 
@@ -555,7 +557,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 28px;
+  min-height: 24px;
   padding: 0 4px;
   border-top: 1px solid var(--gcs-line-faint);
   border-radius: 2px;
@@ -613,6 +615,12 @@
   height: 16px;
   font-size: 8.5px;
   color: var(--gcs-text-3);
+}
+
+/* the chip only appears for non-nominal payload states (off / degraded);
+   the capsule switch itself carries the normal on/off state. */
+.detail-sensor-state[hidden] {
+  display: none !important;
 }
 
 /* capsule switch: 26×14, on = accent, pending until the next snapshot agrees */
@@ -684,7 +692,7 @@
 }
 
 .detail-action-btn {
-  height: 30px;
+  height: 28px;
   justify-content: flex-start;
   gap: 5px;
   padding: 0 6px 0 8px;
@@ -724,7 +732,7 @@
    10. RAW PARAMETERS — collapsed mono table
    ============================================================================= */
 .detail-raw {
-  margin-top: 11px;
+  margin-top: 8px;
   border-top: 1px solid var(--gcs-line-faint);
   padding-top: 1px;
   min-width: 0;
@@ -734,7 +742,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 26px;
+  min-height: 24px;
   list-style: none;
   cursor: pointer;
   user-select: none;

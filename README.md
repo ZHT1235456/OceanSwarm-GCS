@@ -1,111 +1,131 @@
-# OceanSwarm — 未来智能无人艇集群协同巡航海域
+# OceanSwarm GCS — 无人艇集群地面指挥控制上位机
 
-一片数公里尺度的开放海域，17 艘不同类型的智能无人艇（含一艘 30 m 三体无人指挥旗舰）以协同编队巡航。
-船体、海岛、珊瑚礁、波浪、尾迹与光效均由 Three.js 程序化几何与着色器实时生成；外部素材只有两张随仓库分发的
-本地贴图——一张 2K HDR 天空全景（Poly Haven “Kloppenheim 06（Pure Sky）”，CC0）与一张水面法线贴图
-（three.js 官方示例纹理，MIT）——全部同源加载、可完全离线运行。
+> **V2.0 · 无人艇集群上位机**。在继承的 OceanSwarm 三维海域场景之上，构建了一套可真正操作的
+> **无人艇集群地面指挥控制台（GCS / 上位机）**：17 艘无人艇的实时遥测、编队与航速控制、单艇
+> 定点派遣、集群返航 / 调头 / 急停、二维战术图、任务航路、告警引擎、事件流与指令台，
+> 全部与 3D 场景中的真实运动闭环联动，并可完全离线运行。
 
-**v1.1 天空 HDR 升级**：用真实拍摄的全景 HDR 取代此前的程序化渐变穹顶、画布云精灵与太阳光晕——
-随视角环绕可以看到真实方向的逆光积云、散布云与深蓝天顶，海面菲涅尔反射、远处地平线雾以及金属/玻璃的
-环境反射都采样同一张全景，主光方向与全景中烘焙的低角度太阳对齐。
+![控制台总览](docs/figures/gcs-01-console.png)
 
-**v1.2 水面细节升级**：海面改为“程序化波形 + 照片法线贴图微细节”——本地 1024² 水面法线贴图以三个拉伸、
-缓慢漂移的坐标层采样（近景毛细波 / 中景细浪 / 远景风斑），同时驱动反射扰动与太阳碎金；低角度太阳下涟漪
-面片还会产生微明暗变化，配合进一步压暗的深水基底色，呈现“暗水体 + 环境反射”的深蓝质感。
+**继承关系**：`OceanSwarm`（v1.2，Three.js 实时海域 + 17 艇程序化模型 + 编队动力学）作为
+三维态势视景完整保留；本版本新增 `src/sim/`（遥测 / 数据链 / 告警 / 指令总线）、
+`src/ui/`（上位机界面）与 `src/systems/swarm-control.js`（指令执行层），并扩展了
+`src/systems/formation.js`（可变航速 / 转角、指令阵位、单艇自主导航）与 `src/main.js`
+（相机导演、选中光效、拾取、控制台集成）。原始场景文档见
+[docs/OceanSwarm-dev-doc.pdf](docs/OceanSwarm-dev-doc.pdf)。
 
-![初始镜头](docs/figures/fig-00-hero.png)
+- 上位机架构与接口契约：[docs/GCS-architecture.md](docs/GCS-architecture.md)
+- 视觉设计系统：[docs/GCS-design-system.md](docs/GCS-design-system.md)
 
-- 项目仓库：<https://github.com/ZHT1235456/OceanSwarm>
-- 开发文档（中文 LaTeX）：[docs/OceanSwarm-dev-doc.pdf](docs/OceanSwarm-dev-doc.pdf) · [LaTeX 源码](docs/OceanSwarm-dev-doc.tex)
+## 界面与能力
 
-## 效果预览
-
-| | |
+| 区域 | 内容 |
 |---|---|
-| ![低角度旗舰](docs/figures/fig-01-low-angle.png) | ![编队俯视](docs/figures/fig-02-fleet.png) |
-| ![海上试验基地](docs/figures/fig-03-base.png) | ![珊瑚礁潟湖](docs/figures/fig-04-reef.png) |
-| ![集群近景](docs/figures/fig-08-user-swarm.png) | ![海岛](docs/figures/fig-10-user-island.png) |
+| **顶栏** | 集群徽标 · 任务 M-07「协同警戒巡航」· 阶段与航路进度 · 数据链 5/5（延时 / 丢包）· GNSS RTK · 海况 · 活动告警 · UTC+8 时钟 · 指挥员 |
+| **左栏** | 任务卡（阶段刻度 / 任务时钟 MET / 当前航路点）· 17 艇集群名册（分组 / 状态 / 电量 / 航速，点击选中、双击锁定）· 编队控制（5 种队形 / 三档航速 / 保持 / 集结 / 分散 / 调头 / 返航 / 急停） |
+| **中央视景** | 三维海域态势 + HUD（罗经带、视角预设、镜头模式、选中艇锁定框、经纬/航向/航速、动态比例尺、环境卡、渲染读数）；一键切换二维战术图 |
+| **右栏** | 选中艇详情：呼号/型别/状态 · 英雄读数（航速 / 艏向 / 电量环）· 人工地平线姿态 · 数据链（RSSI/延时/丢包/中继）· 能源曲线与电压电流 · 载荷开关（雷达 / 光电 / 声呐 / AIS / MESH）· 单艇操作 · 原始参数 |
+| **底栏** | 实时事件流（指令/告警/任务/链路过滤、未读计数、签收）· 指令台（最后回执、中英文命令、历史、补全、建议） |
+| **覆盖层** | 开机自检动画 · 急停长按确认 · 键盘帮助 · Toast 通知 |
+
+**指令闭环**：操作 → 指令总线（模拟数据链 220–650 ms 延时）→ 场景执行 → 回执 + 事件流。
+例如切换「纵队」后，3D 场景中的 17 艘艇会在数秒内重新排成纵队；「返航」会让集群转向
+2.4 km 外的试验基地并实时显示剩余距离；「急停」会冻结集群运动并在顶栏/事件流形成红色告警，
+此时除「解除急停」外的指令都会被拒绝。任意单艇可被派往战术图上点选的位置，场景中会出现
+目标光柱与航线，抵达后自动待机。
 
 ## 运行
 
 ```bash
-npm install
+npm install        # 已随仓库提供 node_modules 时可跳过
 npm run dev        # http://127.0.0.1:5179
-npm run build      # production build (dist/)
+npm run build      # 生产构建（dist/）
+npm run preview    # 预览构建产物，http://127.0.0.1:5180
 ```
 
-本地素材（HDR 天空全景 `public/hdr/kloppenheim_06_puresky_2k.hdr`，约 4.4 MB；水面法线贴图
-`public/textures/waternormals.jpg`，约 249 KB）**均已包含在仓库中**，无需任何额外下载：Vite 直接从
-应用自身的 base URL 提供这些文件，运行时不访问 CDN 或任何远程资源。若 HDR 缺失，场景会回退到程序化天空；
-若水面法线贴图缺失，海面会回退到程序化涟漪，两者都会在控制台给出提示。
+本地素材（HDR 天空全景 4.4 MB、水面法线贴图 249 KB）随仓库分发，通过应用自身 base URL 加载，
+运行时**不访问任何 CDN 或远程资源**。若素材缺失，场景会回退到程序化天空 / 程序化涟漪。
 
-生产构建使用 `build.target = 'es2022'`（见 `vite.config.js`）：`src/main.js` 通过顶层 `await`
-在装配场景前并行预加载 HDR 全景与水面法线贴图，es2022 对应 Chrome/Edge ≥ 94、Firefox ≥ 93、Safari ≥ 15.4。
-`npm run build` 的 `dist/` 约 5.55 MB（JavaScript 867 KB + gzip 247 KB + HDR 4.43 MB + 水面法线 249 KB）。
+### URL 参数（调试 / 截图用）
 
-## 交互
+| 参数 | 作用 |
+|---|---|
+| `?nointro=1` | 跳过开机自检动画 |
+| `?seed=7` | 固定仿真随机种子（可复现截图与告警） |
+| `?view=default\|fleet\|top\|low\|bow\|side\|base\|reef` | 初始相机预设 |
 
-纯第三人称自由视角，无任何 UI / 文本 / 悬浮面板：
+### 操作
 
-- 左键拖拽：旋转视角
-- 滚轮：平滑缩放（16 m – 4200 m）
-- 右键拖拽：平移观察
-- 视角带阻尼；相机随编队缓慢巡航，可自由靠近水面观察船体、或拉高俯瞰整个集群
+- 鼠标：点击 3D 海面上的艇 / 名册行 / 战术图艇标选中；双击名册行或 3D 艇锁定跟随；
+  拖拽旋转、滚轮缩放、右键平移视角。
+- 键盘：`1`–`5` 编队队形 · `Shift+1/2/3` 微速/巡航/全速 · `Space` 编队保持/恢复 ·
+  `U` 调头 · `F` 锁定选中艇 · `R` 跟随编队 · `M` 三维/战术图 · `H` 纯净视景 ·
+  `Enter` 聚焦指令台 · `Esc` 关闭弹层/取消地图工具 · `?` 帮助。
+- 指令台示例：`编队 楔形`、`formation column`、`航速 全速`、`保持`、`返航`、`急停`、
+  `select scout-2`、`goto 900 -200`、`help`。
 
-## 场景内容
+## 截图
 
-- **海洋**：自定义 ShaderMaterial 海面；CPU/GPU 共享 7 组方向波，船体随浪起伏 / 纵摇 / 横摇；
-  本地 1024² 照片法线贴图提供三层拉伸漂移的微细节（近景毛细波 / 中景细浪 / 远景风斑），用于扰动反射、
-  增强太阳碎金，并让低角度太阳下的涟漪面片产生微明暗；深水基底色压暗、以环境反射塑形，呈现“暗水体 +
-  环境反射”的深蓝质感；菲涅尔天空反射、稀疏白浪、云影、深浅水色与大气雾；海面网格跟随相机、半径 26 km，
-  菲涅尔反射与远处地平线雾都采样同一张 HDR 全景（逐视线方向），地平线无缝衔接。
-- **天空与光照（HDR 大气）**：天空穹顶以等距圆柱投影采样本地 2K HDR 全景 “Kloppenheim 06（Pure Sky）”
-  （CC0，方位角 40.7°、仰角 4.7° 的金色低角度太阳）；真实全景使环绕视角依次呈现逆光积云、散布积云与深蓝天顶。
-  同一全景还用于海面反射 / 地平线雾，并经 `PMREMGenerator` 预滤波作为金属与玻璃的环境反射；
-  主光、补光与半球光按 HDR 中烘焙的太阳方向重新配比。加载失败时回退到程序化天空。
-- **无人艇集群**：1 艘 30 m 三体旗舰（双雷达罩、通信桅杆、旋转雷达、光电球、UUV 机库、折臂吊、
-  舷侧灯带 / 护舷 / 护栏 / 航行灯），以及 16 艘 10–20 m 的高速侦察、环境监测、海洋测绘（双体）、
-  多用途巡逻、通信中继、能源保障、无人救援艇；程序化 Builder 合批几何 + 卡通轮廓线。
-- **编队与航行动画**：旗舰沿数公里尺度的大圆弧缓慢转向，各艇保持编队阵位并带自然摆动；
-  侦察艇周期性向外展开；软弹簧跟随 + 差异化的航向修正。
-- **尾迹 / 技术光效**：17 套独立的历史轨迹尾迹带、船首 V 形破浪、船侧泡沫线、尾流泡沫；
-  克制的青蓝色通信弧线、扫描波纹与测绘扇形探测光束；海鸥群。
-- **环境**：左侧中远景岩石海岛上的未来海洋无人系统试验基地（指挥塔 / 模块建筑 / 栈桥码头 / 无人艇泊位）、
-  120 m 海洋保障母船、右侧浅海珊瑚礁潟湖（海底沙脊 / 珊瑚 / 海草 / 鱼群）、航标浮标阵列、灯塔、
-  海上观测平台、远方风电场、三座远近海岛；天空、云与低角度太阳由 HDR 全景提供（见上）。
+| | |
+|---|---|
+| ![三维态势](docs/figures/gcs-01-console.png) | ![二维战术图](docs/figures/gcs-02-map.png) |
+| ![急停确认](docs/figures/gcs-03-estop.png) | ![开机自检](docs/figures/gcs-04-boot.png) |
 
-## 代码结构
+## 架构
+
+```
+界面层 src/ui/            DOM + Canvas 2D 上位机（各面板 lazy mount，单面板故障隔离）
+  ├─ shell.js             区域骨架（顶栏/左栏/中央视区/右栏/底栏/覆盖层）
+  ├─ context.js           UI 状态、actions、事件总线、dialog 服务
+  ├─ panels/*.js          topbar / left / hud / map / detail / dock / overlays
+  └─ charts.js            手写 Canvas 仪表与图表（无图表库依赖）
+仿真层 src/sim/           10 Hz 遥测建模、数据链、告警规则、事件环形缓冲、指令总线
+场景层 src/main.js        既有 Three.js 场景装配 + GCS 集成
+  ├─ systems/swarm-control.js   编队阵位补间 / 航速 / 保持 / 调头 / 返航 / 急停 / 单艇导航
+  ├─ systems/camera-director.js 跟随编队 / 锁定目标 / 自由视角
+  ├─ systems/formation.js       既有编队动力学（扩展可变航速转角、指令阵位、自主艇）
+  └─ objects/effects/selection.js 选中光环、航点光柱、派遣航线
+```
+
+数据流：`Fleet → SwarmControl → sceneProvider → Sim(10Hz) → snapshot → 各面板`；
+操作走 `actions → Sim.dispatch → 延时 → SwarmControl.command → 场景运动 → 回执事件`。
+界面不直接读写 Three.js 对象，所有数值来自快照，3D 投影与实时光标由 `ctx.scene3d` 提供。
+
+## 质量验证
+
+- `npm run qa:gcs`：Headless Chromium（SwiftShader）整机回归——开机、三维态势、选中联动、
+  战术图、航点派遣、编队切换、急停长按确认、指令拒绝/恢复、帮助、纯净视景、键盘快捷键、
+  3D 拾取，共 30+ 断言，并输出 `artifacts/gcs/run/shots/*.png` 与 `report.json`。
+- `npm run qa:gcs:quick`：快速子集。
+- 断言覆盖：零 console error / pageerror、仅本机请求、关键 DOM 无 NaN、17 艇遥测有限值、
+  指令回执流转、面板无挂载错误。
+- 视觉与交互的基线截图见 `docs/figures/gcs-*.png`。
+
+## 目录结构
 
 ```
 src/
-  main.js                 场景装配、渲染循环、相机预设、灯光、QA 调试钩子
-  config.js               调色板 / 世界布局 / 编队名册 / 相机与光照参数
-  core/
-    geo.js                程序化几何工具、Builder 合批、船体 hullParts 生成器
-    hdri.js               HDR 全景加载（HDRLoader + PMREM 环境光照贴图）
-    materials.js          卡通材质库 + HDR 环境反射（回退：程序化天空）
-    waves.js              CPU/GPU 共享波场
-    water-normal.js       水面法线贴图加载（TextureLoader，RepeatWrapping + mipmap）
-    ocean.js              海面网格与海洋着色器（HDR 反射 + 三层法线细节 + 逐方向地平线雾）
-    sky.js                HDR 天空穹顶、程序化回退与共享天空采样 GLSL
-  systems/formation.js    编队航路、阵位保持、随浪姿态
-  objects/
-    ships/                旗舰与 7 级无人艇程序化模型
-    world/                海岛 / 珊瑚礁 / 海上基地 / 母船 / 航标与设施
-    effects/              尾迹 / 通信与扫描光效 / 海鸥
+  main.js                 场景装配 + GCS 集成（相机导演、拾取、仿真与 UI 装配）
+  config.js               既有场景配置（调色板 / 世界布局 / 编队名册）
+  gcs/meta.js             上位机领域常量（任务 / 呼号 / 分组 / 队形 / 载荷 / 经纬度原点）
+  gcs/scene-bridge.js     三维场景与世界真值适配（scene3d / sceneProvider）
+  sim/                    仿真引擎（model / commands / alarms / events / domain / format）
+  ui/                     上位机界面（见上）
+  core/ objects/ systems/ 继承的场景模块（海洋 / 天空 / 船体 / 世界 / 编队）
+public/                   本地 HDR 与水面法线贴图
+docs/                     本文档、GCS 架构与设计文档、继承的场景开发文档
+artifacts/gcs/            截图与回归脚本（gitignore）
 ```
 
 ## 素材与许可
 
-天空全景：Poly Haven **“Kloppenheim 06（Pure Sky）”** — Greg Zaal（原始全景）、Jarod Guest（天空编辑），
-**CC0 1.0 Universal** 许可，<https://polyhaven.com/a/kloppenheim_06_puresky>；仓库内使用官方 2K HDR
-（`public/hdr/kloppenheim_06_puresky_2k.hdr`，4 434 394 字节，MD5 `590a829b3cf71216451655e601d542c6`，
-2048 × 1024 等距圆柱投影）。
+继承自 OceanSwarm：天空全景 **Poly Haven “Kloppenheim 06（Pure Sky）”**（Greg Zaal /
+Jarod Guest，**CC0 1.0**）；水面法线贴图来自 three.js 官方 Water 示例（**MIT**）。
+完整署名与替换说明见 [CREDITS.md](CREDITS.md)。本版本仅新增纯代码与内联 SVG 图标，
+不含任何新的第三方素材；界面字体使用系统字体栈，离线可用。
 
-水面法线：three.js 官方 “Water” 示例纹理 <https://threejs.org/examples/textures/waternormals.jpg>，
-**MIT** 许可（随 three.js 仓库分发）；仓库内文件 `public/textures/waternormals.jpg`（1024 × 1024，
-248 813 字节，SHA256 `add9912b158a4fe9c12421745babe68c44c8af75631ac4837236cb2a03bc373f`），
-由 `src/core/water-normal.js` 加载，在海洋着色器中三层复用。
+## 说明
 
-除上述两张本地贴图外，场景其余内容均为程序化生成，不使用其他外部贴图、模型或 HDR 资源。
-完整署名、许可说明、两项素材的渲染用途与替换方法见 [CREDITS.md](CREDITS.md)。
+- 本仓库为在继承项目之上的**独立工程**，原始 OceanSwarm 仓库未被修改。
+- 上位机中的任务、海况、链路、告警与艇号均为仿真数据（由 `src/sim/` 按场景真值实时生成），
+  用于演示指挥控制流程与交互设计，不构成真实航行控制软件。
