@@ -1,11 +1,12 @@
 # OceanSwarm GCS — 无人艇集群地面指挥控制上位机
 
-> **V2.1 · 无人艇集群上位机（3-DOF 水动力动力学）**。在继承的 OceanSwarm 三维海域场景之上，
-> 构建了一套可真正操作的 **无人艇集群地面指挥控制台（GCS / 上位机）**：17 艘无人艇的实时遥测、
-> 编队与航速控制、单艇定点派遣、集群返航 / 调头 / 急停、二维战术图、任务航路、告警引擎、
-> 事件流与指令台，全部与 3D 场景中的真实运动闭环联动，并可完全离线运行。
-> 每艘艇由 **纵荡 / 横荡 / 艏摇三自由度水动力操纵模型**（质量 + 附加质量、阻尼、推力/舵限幅、
-> 水流扰动、低速动力定位侧推）驱动，不再是质点运动学。
+> **V2.1 · 无人艇集群上位机**。项目继承 OceanSwarm 三维海域场景，提供 17 艘无人艇的实时遥测、
+> 编队与航速控制、单艇派遣、集群返航 / 调头 / 急停、二维战术图、任务航路、告警、事件流与指令台，
+> 各界面与三维场景中的真实运动闭环联动，可完全离线运行。
+> 每艘艇由 **纵荡 / 横荡 / 艏摇三自由度水动力操纵模型**（质量与附加质量、阻尼、推力与舵限幅、
+> 水流扰动、低速动力定位侧推）驱动，位置、艏向与速度由执行器闭环积分得到。
+
+**项目仓库**：<https://github.com/ZHT1235456/OceanSwarm-GCS>
 
 ![控制台总览](docs/figures/gcs-01-console.png)
 
@@ -14,9 +15,10 @@
 `src/ui/`（上位机界面）、`src/systems/swarm-control.js`（指令执行层）以及
 `src/systems/vessel-dynamics.js` + `motion-controller.js`（3-DOF 水动力 plant 与制导/自动舵/DP），
 并扩展了 `src/systems/formation.js`（真实动力学编队控制）与 `src/main.js`
-（相机导演、选中光效、拾取、控制台集成）。原始场景文档见
-[docs/OceanSwarm-dev-doc.pdf](docs/OceanSwarm-dev-doc.pdf)。
+（相机导演、选中光效、拾取、控制台集成）。开发文档见
+[docs/OceanSwarm-GCS-dev-doc.pdf](docs/OceanSwarm-GCS-dev-doc.pdf)。
 
+- 开发文档（PDF / XeLaTeX 源文件）：[docs/OceanSwarm-GCS-dev-doc.pdf](docs/OceanSwarm-GCS-dev-doc.pdf) · [docs/OceanSwarm-GCS-dev-doc.tex](docs/OceanSwarm-GCS-dev-doc.tex)
 - 上位机架构与接口契约：[docs/GCS-architecture.md](docs/GCS-architecture.md)
 - 视觉设计系统：[docs/GCS-design-system.md](docs/GCS-design-system.md)
 
@@ -143,7 +145,7 @@ src/
   ui/                     上位机界面（见上）
   core/ objects/ systems/ 继承的场景模块（海洋 / 天空 / 船体 / 世界 / 编队）
 public/                   本地 HDR 与水面法线贴图
-docs/                     本文档、GCS 架构与设计文档、继承的场景开发文档
+docs/                     开发文档（PDF / XeLaTeX）、GCS 架构与设计文档、截图基线
 artifacts/gcs/            截图与回归脚本（gitignore）
 ```
 

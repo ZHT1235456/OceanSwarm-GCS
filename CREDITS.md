@@ -79,4 +79,4 @@ OceanSwarm 的几何、着色器、动画与光效几乎全部由代码程序化
 
 ## 文档
 
-开发文档（`docs/OceanSwarm-dev-doc.tex` / `.pdf`）使用 XeLaTeX + ctex 排版，工程截图为项目自身的无头浏览器渲染结果；文档中引用的 Poly Haven 全景与 three.js 水面法线信息以本文件为准。
+开发文档（`docs/OceanSwarm-GCS-dev-doc.tex` / `.pdf`）使用 XeLaTeX + ctex 排版，工程截图为项目自身的无头浏览器渲染结果；文档中引用的 Poly Haven 全景与 three.js 水面法线信息以本文件为准。
