@@ -69,6 +69,17 @@ npm run preview    # 预览构建产物，http://127.0.0.1:5180
 本地素材（HDR 天空全景 4.4 MB、水面法线贴图 249 KB）随仓库分发，通过应用自身 base URL 加载，
 运行时**不访问任何 CDN 或远程资源**。若素材缺失，场景会回退到程序化天空 / 程序化涟漪。
 
+### Windows 桌面版（Tauri 2）
+
+打包为双击即开的便携版 Windows 程序，不需要 Node.js、浏览器或本地服务器；控制台、三维态势、仿真与动力学全部封装在单个 exe 内，HDR 与水面法线贴图已内嵌，断网可运行。
+
+- 已构建产物：`release/OceanSwarm-GCS-2.1.0-win-x64.exe`（约 5.6 MB，x64）
+- 重新构建：`npm run desktop`（需 Rust 1.77+，输出 `src-tauri/target/release/ocean-swarm-gcs.exe`）
+- 生成 NSIS 安装包：`npm run desktop:bundle`（输出 `src-tauri/target/release/bundle/nsis/`）
+- 开发调试：`npm run desktop:dev`
+- 运行依赖系统 WebView2 运行时：Windows 11 自带；Windows 10 安装过 Edge 一般已有，缺失时装一次 Microsoft Edge WebView2 Runtime 即可
+- 窗口默认 1600×900，可缩放；界面、仿真与动力学行为与网页版一致
+
 ### URL 参数（调试 / 截图用）
 
 | 参数 | 作用 |
@@ -146,6 +157,8 @@ src/
   core/ objects/ systems/ 继承的场景模块（海洋 / 天空 / 船体 / 世界 / 编队）
 public/                   本地 HDR 与水面法线贴图
 docs/                     开发文档（PDF / XeLaTeX）、GCS 架构与设计文档、截图基线
+src-tauri/                Tauri 2 桌面壳（Cargo / tauri.conf.json / 图标）与 release 构建入口
+release/                  本地打包产物（不提交到 git）
 artifacts/gcs/            截图与回归脚本（gitignore）
 ```
 

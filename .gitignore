@@ -26,3 +26,10 @@ docs/*.fdb_latexmk
 docs/*.synctex.gz
 docs/*.xdv
 docs/_pages/
+
+# Tauri desktop build output
+src-tauri/target/
+src-tauri/gen/
+
+# desktop build deliverables
+release/
